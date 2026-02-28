@@ -73,23 +73,58 @@ export default function AdminProducts() {
                 </button>
             </div>
 
-            {/* Table */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, overflow: 'hidden' }}>
+            {/* Responsive Product List */}
+            <style>{`
+                .ap-prod-table-wrap { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; overflow: hidden; }
+                /* Table header */
+                .ap-prod-thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.68rem; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.08); }
+                .ap-prod-row td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+                .ap-prod-row:last-child td { border-bottom: none; }
+                /* Action buttons */
+                .ap-act-btn { border-radius: 8px; padding: 0.375rem 0.625rem; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; touch-action: manipulation; min-width: 34px; min-height: 34px; }
+
+                /* ── Mobile card view ── */
+                @media (max-width: 640px) {
+                    .ap-prod-table { display: none; }
+                    .ap-prod-cards { display: flex; flex-direction: column; gap: 0; }
+                    .ap-prod-card {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.75rem;
+                        padding: 0.875rem 1rem;
+                        border-bottom: 1px solid rgba(255,255,255,0.06);
+                    }
+                    .ap-prod-card:last-child { border-bottom: none; }
+                    .ap-prod-card-img { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; border: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+                    .ap-prod-card-body { flex: 1; min-width: 0; }
+                    .ap-prod-card-name { font-weight: 600; color: #e2e8f0; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    .ap-prod-card-meta { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; flex-wrap: wrap; }
+                    .ap-prod-card-actions { display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0; }
+                }
+                @media (min-width: 641px) {
+                    .ap-prod-table { display: table; width: 100%; border-collapse: collapse; }
+                    .ap-prod-cards { display: none; }
+                }
+            `}</style>
+
+            <div className="ap-prod-table-wrap">
+
+                {/* ── Desktop Table ── */}
                 <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table className="ap-prod-table">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            <tr className="ap-prod-thead">
                                 {['Product', 'Category', 'Price', 'Stock', 'Featured', 'Actions'].map(h => (
-                                    <th key={h} style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.7rem', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                                    <th key={h}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {filtered.map(p => (
-                                <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background .15s' }}
+                                <tr key={p.id} className="ap-prod-row"
                                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '0.875rem 1rem' }}>
+                                    <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
                                             <div>
@@ -98,29 +133,21 @@ export default function AdminProducts() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td style={{ padding: '0.875rem 1rem' }}>
-                                        <span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span>
-                                    </td>
-                                    <td style={{ padding: '0.875rem 1rem' }}>
+                                    <td><span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span></td>
+                                    <td>
                                         <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
                                         {p.oldPrice && <div style={{ color: '#475569', fontSize: '0.75rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
                                     </td>
-                                    <td style={{ padding: '0.875rem 1rem' }}>
-                                        <span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span>
-                                    </td>
-                                    <td style={{ padding: '0.875rem 1rem' }}>
-                                        <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155', transition: 'color .2s' }}>
+                                    <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
+                                    <td>
+                                        <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
                                             <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
                                         </button>
                                     </td>
-                                    <td style={{ padding: '0.875rem 1rem' }}>
+                                    <td>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={() => openEdit(p)} style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd', borderRadius: 8, padding: '0.375rem 0.625rem', cursor: 'pointer' }}>
-                                                <FiEdit2 size={14} />
-                                            </button>
-                                            <button onClick={() => setConfirm(p.id)} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.375rem 0.625rem', cursor: 'pointer' }}>
-                                                <FiTrash2 size={14} />
-                                            </button>
+                                            <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
+                                            <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -128,8 +155,35 @@ export default function AdminProducts() {
                         </tbody>
                     </table>
                 </div>
+
+                {/* ── Mobile Cards ── */}
+                <div className="ap-prod-cards">
+                    {filtered.map(p => (
+                        <div key={p.id} className="ap-prod-card">
+                            <img src={p.image} alt={p.name} className="ap-prod-card-img" />
+                            <div className="ap-prod-card-body">
+                                <div className="ap-prod-card-name">{p.name}</div>
+                                <div className="ap-prod-card-meta">
+                                    <span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '1px 7px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 600 }}>{p.category}</span>
+                                    <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.85rem' }}>£{p.price.toFixed(2)}</span>
+                                    {p.oldPrice && <span style={{ color: '#475569', fontSize: '0.72rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</span>}
+                                    <span style={{ color: stockColor(p.stock), fontSize: '0.75rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span>
+                                </div>
+                            </div>
+                            <div className="ap-prod-card-actions">
+                                <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#475569', padding: '0.375rem', WebkitTapHighlightColor: 'transparent' }}>
+                                    <FiStar size={17} fill={p.featured ? '#fbbf24' : 'none'} />
+                                </button>
+                                <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
+                                <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
                 {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>No products found.</div>}
             </div>
+
 
             {/* Delete confirm */}
             {confirm && (
@@ -156,11 +210,11 @@ export default function AdminProducts() {
                         </div>
                         <Input label="Product Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Organic Apples" required />
                         <Input label="Image URL" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="https://…" />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                             <Input label="Price (£)" type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="1.99" />
                             <Input label="Old Price (£, optional)" type="number" step="0.01" value={form.oldPrice} onChange={e => setForm(f => ({ ...f, oldPrice: e.target.value }))} placeholder="2.49" />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                             <Input label="Stock" type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="10" />
                             <Input label="Rating (0–5)" type="number" step="0.1" max="5" value={form.rating} onChange={e => setForm(f => ({ ...f, rating: e.target.value }))} placeholder="4.5" />
                         </div>
