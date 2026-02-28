@@ -23,18 +23,34 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+const isFirebaseConfigured = !!import.meta.env.VITE_FIREBASE_API_KEY;
+
 // Initialise Firebase app
-const app = initializeApp(firebaseConfig);
+let app;
+let auth;
+let googleProvider;
 
-// Auth
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+if (isFirebaseConfigured) {
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
 
-// Analytics — only initialise in browser environments (not SSR/Node)
-isSupported().then((yes) => { if (yes) getAnalytics(app); });
+        // Analytics — only initialise in browser environments (not SSR/Node)
+        isSupported().then((yes) => { if (yes) getAnalytics(app); });
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
+    }
+} else {
+    // Provide a mocked auth instance to prevent component crashes
+    console.error("Firebase Environment Variables missing!");
+    auth = { onAuthStateChanged: () => () => { }, currentUser: null };
+    googleProvider = {};
+}
 
-// Re-export Firebase Auth helpers for use across the app
+// Re-export Firebase Auth helpers and the configuration flag
 export {
+    isFirebaseConfigured,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signInWithPopup,

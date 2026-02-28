@@ -29,6 +29,8 @@ import { AuthProvider } from './context/AuthContext';
 import { AdminProvider } from './context/AdminContext';
 import { UserDataProvider } from './context/UserDataContext';
 
+import { isFirebaseConfigured } from './firebase';
+
 // Layout wrapper — hides Navbar/Footer on admin pages
 const StoreLayout = ({ children }) => (
   <>
@@ -86,6 +88,11 @@ function App() {
         <UserDataProvider>
           <Router>
             <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+              {!isFirebaseConfigured && (
+                <div style={{ backgroundColor: '#ffcccc', color: '#cc0000', padding: '15px', textAlign: 'center', fontWeight: 'bold' }}>
+                  ⚠️ Firebase Environment Variables are missing! If you deployed this website via Vercel or Netlify, please add the VITE_FIREBASE_* variables to your Environment Variables setting in the dashboard, and redeploy! ⚠️
+                </div>
+              )}
               <Routes>
                 {/* ── Admin routes (no store navbar/footer) ── */}
                 <Route path="/admin/login" element={<AdminLogin />} />
