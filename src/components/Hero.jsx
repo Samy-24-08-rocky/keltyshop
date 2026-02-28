@@ -19,7 +19,7 @@ const Hero = () => (
         {/* Left: text */}
         <div className="hero-content">
           <div className="hero-badge">
-            🛒 &nbsp;Now delivering same day in London
+            🛒 &nbsp;Now delivering same day in Kelty!
           </div>
 
           <h1 className="hero-title">
