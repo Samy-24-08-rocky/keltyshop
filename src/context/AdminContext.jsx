@@ -194,7 +194,12 @@ export const AdminProvider = ({ children }) => {
     // ── Orders ────────────────────────────────────────────────────────────────
     const updateOrderStatus = useCallback(async (id, status) => {
         const target = orders.find(o => o.id === id);
-        if (target?._docId) await updateOrderFS(target._docId, { status });
+        if (!target) return;
+        // Optimistic update
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+        try {
+            if (target._docId) await updateOrderFS(target._docId, { status });
+        } catch (err) { console.error('updateOrderStatus failed:', err); }
     }, [orders]);
 
     const addOrder = useCallback(async (order) => {
@@ -205,25 +210,51 @@ export const AdminProvider = ({ children }) => {
 
     const updateOrder = useCallback(async (id, updates) => {
         const target = orders.find(o => o.id === id);
-        if (target?._docId) await updateOrderFS(target._docId, updates);
+        if (!target) return;
+        // Optimistic update
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+        try {
+            if (target._docId) await updateOrderFS(target._docId, updates);
+        } catch (err) { console.error('updateOrder failed:', err); }
     }, [orders]);
 
     // Soft delete — marks as deleted, keeps in Firestore (recoverable)
     const softDeleteOrder = useCallback(async (id) => {
         const target = orders.find(o => o.id === id);
-        if (target?._docId) await updateOrderFS(target._docId, { _deleted: true, _deletedAt: new Date().toISOString() });
+        if (!target) return;
+        const patch = { _deleted: true, _deletedAt: new Date().toISOString() };
+        // Optimistic update
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
+        try {
+            if (target._docId) await updateOrderFS(target._docId, patch);
+        } catch (err) { console.error('softDeleteOrder failed:', err); }
     }, [orders]);
 
     // Restore a soft-deleted order
     const restoreOrder = useCallback(async (id) => {
         const target = orders.find(o => o.id === id);
-        if (target?._docId) await updateOrderFS(target._docId, { _deleted: false, _deletedAt: null });
+        if (!target) return;
+        const patch = { _deleted: false, _deletedAt: null };
+        // Optimistic update
+        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
+        try {
+            if (target._docId) await updateOrderFS(target._docId, patch);
+        } catch (err) { console.error('restoreOrder failed:', err); }
     }, [orders]);
 
-    // Permanent delete — removes from Firestore forever
+    // Permanent delete — removes from Firestore and local state immediately
     const deleteOrder = useCallback(async (id) => {
         const target = orders.find(o => o.id === id);
-        if (target?._docId) await deleteOrderFS(target._docId);
+        if (!target) return;
+        // Optimistic remove from local state immediately
+        setOrders(prev => prev.filter(o => o.id !== id));
+        try {
+            if (target._docId) await deleteOrderFS(target._docId);
+        } catch (err) {
+            console.error('deleteOrder failed:', err);
+            // Rollback if Firestore delete failed
+            setOrders(prev => [...prev, target]);
+        }
     }, [orders]);
 
     // ── Settings ──────────────────────────────────────────────────────────────
