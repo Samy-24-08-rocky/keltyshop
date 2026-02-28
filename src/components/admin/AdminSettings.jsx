@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../../context/AdminContext';
-import { FiSave, FiCheck, FiTruck, FiZap, FiClock, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
+import { FiSave, FiCheck, FiTruck, FiZap, FiClock, FiLock, FiMail, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
+
+// ── Helpers to read/write custom admin creds in localStorage ─────────────────
+const getAdminEmail = () =>
+    localStorage.getItem('admin_custom_email') ||
+    import.meta.env.VITE_ADMIN_EMAIL ||
+    'admin@kelty.com';
+
+const getAdminPassword = () =>
+    localStorage.getItem('admin_custom_password') ||
+    import.meta.env.VITE_ADMIN_PASSWORD ||
+    'admin123';
+
+export { getAdminEmail, getAdminPassword };
 
 const inp = {
     width: '100%', boxSizing: 'border-box',
@@ -45,6 +58,41 @@ export default function AdminSettings() {
     const { settings, updateSettings } = useAdmin();
     const [local, setLocal] = useState({ ...settings });
     const [saved, setSaved] = useState(false);
+
+    // ── Credential change state ───────────────────────────────────────────────
+    const [emailForm, setEmailForm] = useState({ currentPw: '', newEmail: '' });
+    const [pwForm, setPwForm] = useState({ currentPw: '', newPw: '', confirmPw: '' });
+    const [emailMsg, setEmailMsg] = useState(null); // { type:'success'|'error', text }
+    const [pwMsg, setPwMsg] = useState(null);
+    const [showCurPw, setShowCurPw] = useState(false);
+    const [showNewPw, setShowNewPw] = useState(false);
+
+    const flashMsg = (set, type, text) => {
+        set({ type, text });
+        setTimeout(() => set(null), 3500);
+    };
+
+    const handleEmailChange = () => {
+        if (!emailForm.newEmail.includes('@')) return flashMsg(setEmailMsg, 'error', 'Enter a valid email address.');
+        if (emailForm.currentPw !== getAdminPassword()) return flashMsg(setEmailMsg, 'error', 'Current password is incorrect.');
+        localStorage.setItem('admin_custom_email', emailForm.newEmail.trim().toLowerCase());
+        // Also update the stored admin_user so the sidebar shows the new email
+        try {
+            const u = JSON.parse(localStorage.getItem('admin_user_v3'));
+            if (u) localStorage.setItem('admin_user_v3', JSON.stringify({ ...u, email: emailForm.newEmail.trim().toLowerCase() }));
+        } catch { }
+        setEmailForm({ currentPw: '', newEmail: '' });
+        flashMsg(setEmailMsg, 'success', 'Login email updated! Use it next time you sign in.');
+    };
+
+    const handlePasswordChange = () => {
+        if (pwForm.currentPw !== getAdminPassword()) return flashMsg(setPwMsg, 'error', 'Current password is incorrect.');
+        if (pwForm.newPw.length < 6) return flashMsg(setPwMsg, 'error', 'New password must be at least 6 characters.');
+        if (pwForm.newPw !== pwForm.confirmPw) return flashMsg(setPwMsg, 'error', 'Passwords do not match.');
+        localStorage.setItem('admin_custom_password', pwForm.newPw);
+        setPwForm({ currentPw: '', newPw: '', confirmPw: '' });
+        flashMsg(setPwMsg, 'success', 'Password updated successfully!');
+    };
 
     const set = (k, v) => setLocal(s => ({ ...s, [k]: v }));
 
@@ -218,6 +266,112 @@ export default function AdminSettings() {
                         label="Allow New Customer Registrations"
                         sublabel="Disable to prevent new accounts being created"
                     />
+                </div>
+            </Section>
+
+            {/* ── Admin Account ── */}
+            <Section title="🔐 Admin Account">
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: 0, marginBottom: '1.5rem' }}>
+                    Update the email address or password used to access this admin panel.
+                    Changes take effect on your next login.
+                </p>
+
+                {/* Msg helper */}
+                {[{ msg: emailMsg, label: 'email' }, { msg: pwMsg, label: 'pw' }].map(({ msg, label }) =>
+                    msg ? (
+                        <div key={label} style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            background: msg.type === 'success' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                            border: `1px solid ${msg.type === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                            borderRadius: 10, padding: '0.7rem 1rem', marginBottom: '1rem',
+                            color: msg.type === 'success' ? '#86efac' : '#fca5a5', fontSize: '0.85rem',
+                        }}>
+                            {msg.type === 'success' ? <FiCheck size={15} /> : <FiAlertCircle size={15} />}
+                            {msg.text}
+                        </div>
+                    ) : null
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1.25rem' }}>
+
+                    {/* Change Email */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FiMail size={15} color="#818cf8" />
+                            </div>
+                            <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '0.9rem' }}>Change Login Email</span>
+                        </div>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 500 }}>Current Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showCurPw ? 'text' : 'password'}
+                                    placeholder="••••••••"
+                                    value={emailForm.currentPw}
+                                    onChange={e => setEmailForm(f => ({ ...f, currentPw: e.target.value }))}
+                                    style={{ ...inp, paddingRight: '2.5rem' }}
+                                />
+                                <button type="button" onClick={() => setShowCurPw(v => !v)}
+                                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}>
+                                    {showCurPw ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 500 }}>New Email Address</label>
+                            <input
+                                type="email"
+                                placeholder="e.g. you@example.com"
+                                value={emailForm.newEmail}
+                                onChange={e => setEmailForm(f => ({ ...f, newEmail: e.target.value }))}
+                                style={inp}
+                            />
+                        </div>
+                        <button onClick={handleEmailChange} style={{ width: '100%', padding: '0.65rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', WebkitTapHighlightColor: 'transparent' }}>
+                            <FiMail size={14} /> Update Email
+                        </button>
+                    </div>
+
+                    {/* Change Password */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <FiLock size={15} color="#f87171" />
+                            </div>
+                            <span style={{ color: '#e2e8f0', fontWeight: 600, fontSize: '0.9rem' }}>Change Password</span>
+                        </div>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 500 }}>Current Password</label>
+                            <input type="password" placeholder="••••••••" value={pwForm.currentPw}
+                                onChange={e => setPwForm(f => ({ ...f, currentPw: e.target.value }))} style={inp} />
+                        </div>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 500 }}>New Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showNewPw ? 'text' : 'password'}
+                                    placeholder="Min. 6 characters"
+                                    value={pwForm.newPw}
+                                    onChange={e => setPwForm(f => ({ ...f, newPw: e.target.value }))}
+                                    style={{ ...inp, paddingRight: '2.5rem' }}
+                                />
+                                <button type="button" onClick={() => setShowNewPw(v => !v)}
+                                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}>
+                                    {showNewPw ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.3rem', fontWeight: 500 }}>Confirm New Password</label>
+                            <input type="password" placeholder="Repeat new password" value={pwForm.confirmPw}
+                                onChange={e => setPwForm(f => ({ ...f, confirmPw: e.target.value }))} style={inp} />
+                        </div>
+                        <button onClick={handlePasswordChange} style={{ width: '100%', padding: '0.65rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', WebkitTapHighlightColor: 'transparent' }}>
+                            <FiLock size={14} /> Update Password
+                        </button>
+                    </div>
+
                 </div>
             </Section>
 
