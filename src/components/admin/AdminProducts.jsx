@@ -5,7 +5,7 @@ import BarcodeScanner from './BarcodeScanner';
 
 const CATEGORIES = ['Pantry', 'Condiments', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Drinks', 'Snacks'];
 
-const blank = { name: '', price: '', oldPrice: '', category: 'Pantry', stock: '', image: '', rating: '4.5', featured: false };
+const blank = { name: '', price: '', oldPrice: '', category: 'Pantry', stock: '', image: '', rating: '4.5', featured: false, barcode: '' };
 
 const Input = ({ label, ...props }) => (
     <div style={{ marginBottom: '1rem' }}>
@@ -129,7 +129,7 @@ export default function AdminProducts() {
                                             <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
                                             <div>
                                                 <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{p.name}</div>
-                                                <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}</div>
+                                                <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}{p.barcode ? ` · 🔳 ${p.barcode}` : ''}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -209,6 +209,7 @@ export default function AdminProducts() {
                             <button onClick={() => setModal(null)} style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '0.5rem', color: '#94a3b8', cursor: 'pointer' }}><FiX size={18} /></button>
                         </div>
                         <Input label="Product Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Organic Apples" required />
+                        <Input label="Barcode (optional — for POS scanning)" value={form.barcode || ''} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} placeholder="e.g. 5012345678900" />
                         <Input label="Image URL" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="https://…" />
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                             <Input label="Price (£)" type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="1.99" />

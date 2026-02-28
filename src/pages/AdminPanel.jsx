@@ -9,14 +9,16 @@ import AdminSettings from '../components/admin/AdminSettings';
 import AdminReports from '../components/admin/AdminReports';
 import AdminStock from '../components/admin/AdminStock';
 import AdminReviews from '../components/admin/AdminReviews';
+import AdminPOS from '../components/admin/AdminPOS';
 import {
     FiGrid, FiPackage, FiShoppingBag, FiTruck, FiSettings,
     FiLogOut, FiMenu, FiX, FiShoppingCart, FiChevronRight, FiBarChart2,
-    FiAlertTriangle, FiMessageSquare
+    FiAlertTriangle, FiMessageSquare, FiMonitor
 } from 'react-icons/fi';
 
 const NAV = [
     { id: 'dashboard', label: 'Dashboard', icon: FiGrid },
+    { id: 'pos', label: 'POS / Till', icon: FiMonitor },
     { id: 'products', label: 'Products', icon: FiPackage },
     { id: 'stock', label: 'Stock Management', icon: FiAlertTriangle },
     { id: 'orders', label: 'Orders', icon: FiShoppingBag },
@@ -63,6 +65,7 @@ export default function AdminPanel() {
 
     const SECTIONS = {
         dashboard: <AdminDashboard />,
+        pos: <AdminPOS />,
         products: <AdminProducts />,
         stock: <AdminStock />,
         orders: <AdminOrders />,
