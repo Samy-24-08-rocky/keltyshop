@@ -431,6 +431,47 @@ const Navbar = ({ toggleCart, cartCount }) => {
         }
         .mobile-admin-link:hover { background: #e0e7ff; }
 
+        /* Announcement banner */
+        .announce-bar {
+          background: linear-gradient(90deg, #ef4444, #f97316, #ef4444);
+          background-size: 200% auto;
+          animation: shiftGrad 4s linear infinite;
+          color: white;
+          font-size: 0.78rem;
+          font-weight: 600;
+          padding: 0.45rem 0;
+          overflow: hidden;
+          white-space: nowrap;
+          letter-spacing: 0.02em;
+        }
+        .announce-track {
+          display: inline-flex;
+          gap: 0;
+          animation: ticker 28s linear infinite;
+        }
+        .announce-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0 2.5rem;
+        }
+        .announce-dot {
+          width: 4px; height: 4px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.6);
+          display: inline-block;
+          margin: 0 0.5rem;
+        }
+        @keyframes ticker {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .announce-bar:hover .announce-track { animation-play-state: paused; }
+
+        @media (max-width: 500px) {
+          .announce-bar { font-size: 0.72rem; }
+        }
+
         @media (max-width: 900px) {
           .nav-links { display: none; }
           .search-wrap { display: none; }
@@ -459,6 +500,25 @@ const Navbar = ({ toggleCart, cartCount }) => {
           .nav-actions { gap: 0.25rem; }
         }
       `}</style>
+
+      {/* ── Announcement Banner ── */}
+      <div className="announce-bar" role="marquee" aria-label="Announcement">
+        {/* Duplicate the track so the loop is seamless */}
+        <div className="announce-track">
+          {[...Array(2)].map((_, i) => (
+            <span key={i} style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <span className="announce-item">🛒 Now delivering <strong>same day</strong> in Kelty!</span>
+              <span className="announce-dot" />
+              <span className="announce-item">🚚 Order before <strong>1 pm</strong> — arrive by 9 pm today</span>
+              <span className="announce-dot" />
+              <span className="announce-item">✨ Free delivery on orders over <strong>£30</strong></span>
+              <span className="announce-dot" />
+              <span className="announce-item">🌿 Fresh groceries, delivered fast</span>
+              <span className="announce-dot" />
+            </span>
+          ))}
+        </div>
+      </div>
 
       <nav className={`navbar-root ${isScrolled ? 'scrolled' : 'top'}`}>
         {/* Animated top accent */}
