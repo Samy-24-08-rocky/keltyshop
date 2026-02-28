@@ -1,6 +1,7 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import { getFirestore } from 'firebase/firestore';
 import {
     getAuth,
     GoogleAuthProvider,
@@ -28,12 +29,14 @@ const isFirebaseConfigured = !!import.meta.env.VITE_FIREBASE_API_KEY;
 // Initialise Firebase app
 let app;
 let auth;
+let db;
 let googleProvider;
 
 if (isFirebaseConfigured) {
     try {
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
+        db = getFirestore(app);
         googleProvider = new GoogleAuthProvider();
 
         // Analytics — only initialise in browser environments (not SSR/Node)
@@ -51,6 +54,7 @@ if (isFirebaseConfigured) {
 // Re-export Firebase Auth helpers and the configuration flag
 export {
     auth,
+    db,
     googleProvider,
     isFirebaseConfigured,
     createUserWithEmailAndPassword,

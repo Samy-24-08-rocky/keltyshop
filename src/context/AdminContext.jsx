@@ -1,6 +1,24 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import {
+    seedCollectionIfEmpty,
+    subscribeProducts,
+    addProductFS,
+    updateProductFS,
+    deleteProductFS,
+    subscribeOrders,
+    addOrderFS,
+    updateOrderFS,
+    deleteOrderFS,
+    getSettings,
+    saveSettings,
+    subscribeSettings,
+    subscribeTestimonials,
+    addTestimonialFS,
+    updateTestimonialFS,
+    deleteTestimonialFS,
+} from '../services/firestoreService';
 
-// ─── Initial seed data ─────────────────────────────────────────────────────────
+// ─── Initial seed data (used only on first run to populate Firestore) ─────────
 const INITIAL_PRODUCTS = [
     { id: 1, name: 'Extra Virgin Olive Oil', price: 5.99, oldPrice: 7.49, rating: 4.8, category: 'Pantry', stock: 15, featured: true, image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=800&q=80' },
     { id: 2, name: 'Fresh Milk', price: 1.19, oldPrice: null, rating: 4.5, category: 'Dairy', stock: 8, featured: true, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=800&q=80' },
@@ -55,9 +73,7 @@ const INITIAL_SETTINGS = {
     maintenanceMode: false,
     allowNewRegistrations: true,
     featuredProductsCount: 8,
-    // Order confirmation mode
-    orderConfirmation: 'auto',   // 'auto' | 'manual'
-    // Per-option delivery configuration
+    orderConfirmation: 'auto',
     deliveryOptions: [
         { id: 'standard', label: 'Standard Delivery', description: 'Delivered by Royal Mail · 2–3 business days', time: '2–3 business days', price: 3.99, enabled: true },
         { id: 'express', label: 'Express Delivery', description: 'Order before 3 pm for next-day delivery', time: 'Next day', price: 6.99, enabled: true },
@@ -68,47 +84,68 @@ const INITIAL_SETTINGS = {
 const INITIAL_TESTIMONIALS = [
     { id: 1, name: 'Sarah Johnson', role: 'Local Resident', rating: 5, image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80', text: "Kelty's has been my go-to market for years! The quality is unmatched and I love the wide selection of pantry staples.", isApproved: true, date: '2026-02-15' },
     { id: 2, name: 'Michael Chen', role: 'Professional Chef', rating: 5, image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&q=80', text: "As a chef, I demand quality ingredients. Kelty's consistently delivers premium products that elevate my dishes. Delivery is always on time!", isApproved: true, date: '2026-02-10' },
-    { id: 3, name: 'Emma Rodriguez', role: 'Busy Mum of Three', rating: 5, image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80', text: 'With three kids and a full-time job, grocery shopping was stressful. Kelty\'s has been a lifesaver — easy website, prompt delivery, top quality.', isApproved: true, date: '2026-02-05' },
+    { id: 3, name: 'Emma Rodriguez', role: 'Busy Mum of Three', rating: 5, image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&q=80', text: "With three kids and a full-time job, grocery shopping was stressful. Kelty's has been a lifesaver — easy website, prompt delivery, top quality.", isApproved: true, date: '2026-02-05' },
 ];
 
 // ─── Context ───────────────────────────────────────────────────────────────────
 const AdminContext = createContext(null);
 
 export const AdminProvider = ({ children }) => {
-    const [products, setProducts] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('admin_products_v3')) || INITIAL_PRODUCTS; }
-        catch { return INITIAL_PRODUCTS; }
-    });
-
-    const [orders, setOrders] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('admin_orders_v3')) || INITIAL_ORDERS; }
-        catch { return INITIAL_ORDERS; }
-    });
-
-    const [settings, setSettings] = useState(() => {
-        try { return { ...INITIAL_SETTINGS, ...JSON.parse(localStorage.getItem('admin_settings_v3')) }; }
-        catch { return INITIAL_SETTINGS; }
-    });
-
-    const [testimonials, setTestimonials] = useState(() => {
-        try { return JSON.parse(localStorage.getItem('admin_testimonials_v3')) || INITIAL_TESTIMONIALS; }
-        catch { return INITIAL_TESTIMONIALS; }
-    });
-
+    const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
+    const [settings, setSettings] = useState(INITIAL_SETTINGS);
+    const [testimonials, setTestimonials] = useState([]);
     const [adminUser, setAdminUser] = useState(() => {
         try { return JSON.parse(localStorage.getItem('admin_user_v3')); }
         catch { return null; }
     });
+    const [loading, setLoading] = useState(true);
 
-    // Persist to localStorage whenever data changes
-    useEffect(() => { localStorage.setItem('admin_products_v3', JSON.stringify(products)); }, [products]);
-    useEffect(() => { localStorage.setItem('admin_orders_v3', JSON.stringify(orders)); }, [orders]);
-    useEffect(() => { localStorage.setItem('admin_settings_v3', JSON.stringify(settings)); }, [settings]);
-    useEffect(() => { localStorage.setItem('admin_testimonials_v3', JSON.stringify(testimonials)); }, [testimonials]);
+    // ── Seed Firestore on first load, then subscribe to real-time updates ─────
+    useEffect(() => {
+        let unsubProducts, unsubOrders, unsubSettings, unsubTestimonials;
 
-    // ── Admin auth ───────────────────────────────────────────────────────────────
+        const init = async () => {
+            try {
+                // Seed collections if they are empty (first run only)
+                await Promise.all([
+                    seedCollectionIfEmpty('products', INITIAL_PRODUCTS),
+                    seedCollectionIfEmpty('orders', INITIAL_ORDERS),
+                    seedCollectionIfEmpty('testimonials', INITIAL_TESTIMONIALS),
+                ]);
+
+                // Seed settings document if missing
+                const existingSettings = await getSettings();
+                if (!existingSettings) {
+                    await saveSettings(INITIAL_SETTINGS);
+                }
+            } catch (err) {
+                console.error('Firestore seed error:', err);
+            }
+
+            // Subscribe to real-time listeners
+            unsubProducts = subscribeProducts(setProducts);
+            unsubOrders = subscribeOrders(setOrders);
+            unsubSettings = subscribeSettings((s) =>
+                setSettings(prev => ({ ...INITIAL_SETTINGS, ...prev, ...s }))
+            );
+            unsubTestimonials = subscribeTestimonials(setTestimonials);
+
+            setLoading(false);
+        };
+
+        init();
+
+        return () => {
+            unsubProducts?.();
+            unsubOrders?.();
+            unsubSettings?.();
+            unsubTestimonials?.();
+        };
+    }, []);
+
+    // ── Admin auth ────────────────────────────────────────────────────────────
     const adminLogin = useCallback((email, password) => {
-        // Priority: 1) localStorage custom creds  2) env vars  3) hardcoded defaults
         const expectedEmail =
             localStorage.getItem('admin_custom_email') ||
             import.meta.env.VITE_ADMIN_EMAIL ||
@@ -132,63 +169,86 @@ export const AdminProvider = ({ children }) => {
         localStorage.removeItem('admin_user_v3');
     }, []);
 
-    // ── Products CRUD ────────────────────────────────────────────────────────────
-    const addProduct = useCallback((product) => {
-        const newId = Math.max(...products.map(p => p.id), 0) + 1;
-        setProducts(prev => [...prev, { ...product, id: newId }]);
+    // ── Products CRUD ─────────────────────────────────────────────────────────
+    const addProduct = useCallback(async (product) => {
+        const newId = Math.max(...products.map(p => p.id ?? 0), 0) + 1;
+        await addProductFS({ ...product, id: newId });
     }, [products]);
 
-    const updateProduct = useCallback((id, updates) => {
-        setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-    }, []);
+    const updateProduct = useCallback(async (id, updates) => {
+        const target = products.find(p => p.id === id);
+        if (target?._docId) await updateProductFS(target._docId, updates);
+    }, [products]);
 
-    const deleteProduct = useCallback((id) => {
-        setProducts(prev => prev.filter(p => p.id !== id));
-    }, []);
+    const deleteProduct = useCallback(async (id) => {
+        const target = products.find(p => p.id === id);
+        if (target?._docId) await deleteProductFS(target._docId);
+    }, [products]);
 
-    const toggleFeatured = useCallback((id) => {
-        setProducts(prev => prev.map(p => p.id === id ? { ...p, featured: !p.featured } : p));
-    }, []);
+    const toggleFeatured = useCallback(async (id) => {
+        const target = products.find(p => p.id === id);
+        if (target?._docId) await updateProductFS(target._docId, { featured: !target.featured });
+    }, [products]);
 
-    // ── Orders ───────────────────────────────────────────────────────────────────
-    const updateOrderStatus = useCallback((id, status) => {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-    }, []);
+    // ── Orders ────────────────────────────────────────────────────────────────
+    const updateOrderStatus = useCallback(async (id, status) => {
+        const target = orders.find(o => o.id === id);
+        if (target?._docId) await updateOrderFS(target._docId, { status });
+    }, [orders]);
 
-    const addOrder = useCallback((order) => {
-        const num = Math.max(...(JSON.parse(localStorage.getItem('admin_orders_v3') || '[]').map(o => parseInt(o.id.replace('ORD-', '')) || 0)), 0) + 1;
+    const addOrder = useCallback(async (order) => {
+        const num = Math.max(...orders.map(o => parseInt(o.id?.replace('ORD-', '')) || 0), 0) + 1;
         const newId = `ORD-${String(num).padStart(3, '0')}`;
-        setOrders(prev => [{ ...order, id: newId }, ...prev]);
-    }, []);
+        await addOrderFS({ ...order, id: newId });
+    }, [orders]);
 
-    const updateOrder = useCallback((id, updates) => {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-    }, []);
+    const updateOrder = useCallback(async (id, updates) => {
+        const target = orders.find(o => o.id === id);
+        if (target?._docId) await updateOrderFS(target._docId, updates);
+    }, [orders]);
 
-    const deleteOrder = useCallback((id) => {
-        setOrders(prev => prev.filter(o => o.id !== id));
-    }, []);
+    // Soft delete — marks as deleted, keeps in Firestore (recoverable)
+    const softDeleteOrder = useCallback(async (id) => {
+        const target = orders.find(o => o.id === id);
+        if (target?._docId) await updateOrderFS(target._docId, { _deleted: true, _deletedAt: new Date().toISOString() });
+    }, [orders]);
 
-    // ── Settings ─────────────────────────────────────────────────────────────────
-    const updateSettings = useCallback((updates) => {
-        setSettings(prev => ({ ...prev, ...updates }));
-    }, []);
+    // Restore a soft-deleted order
+    const restoreOrder = useCallback(async (id) => {
+        const target = orders.find(o => o.id === id);
+        if (target?._docId) await updateOrderFS(target._docId, { _deleted: false, _deletedAt: null });
+    }, [orders]);
 
-    // ── Testimonials ──────────────────────────────────────────────────────────────
-    const addTestimonial = useCallback((testimonial) => {
-        const newId = Math.max(...testimonials.map(t => t.id), 0) + 1;
-        setTestimonials(prev => [{ ...testimonial, id: newId }, ...prev]);
+    // Permanent delete — removes from Firestore forever
+    const deleteOrder = useCallback(async (id) => {
+        const target = orders.find(o => o.id === id);
+        if (target?._docId) await deleteOrderFS(target._docId);
+    }, [orders]);
+
+    // ── Settings ──────────────────────────────────────────────────────────────
+    const updateSettings = useCallback(async (updates) => {
+        const merged = { ...settings, ...updates };
+        setSettings(merged); // optimistic local update
+        await saveSettings(merged);
+    }, [settings]);
+
+    // ── Testimonials ──────────────────────────────────────────────────────────
+    const addTestimonial = useCallback(async (testimonial) => {
+        const newId = Math.max(...testimonials.map(t => t.id ?? 0), 0) + 1;
+        await addTestimonialFS({ ...testimonial, id: newId });
     }, [testimonials]);
 
-    const updateTestimonial = useCallback((id, updates) => {
-        setTestimonials(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-    }, []);
+    const updateTestimonial = useCallback(async (id, updates) => {
+        const target = testimonials.find(t => t.id === id);
+        if (target?._docId) await updateTestimonialFS(target._docId, updates);
+    }, [testimonials]);
 
-    const deleteTestimonial = useCallback((id) => {
-        setTestimonials(prev => prev.filter(t => t.id !== id));
-    }, []);
+    const deleteTestimonial = useCallback(async (id) => {
+        const target = testimonials.find(t => t.id === id);
+        if (target?._docId) await deleteTestimonialFS(target._docId);
+    }, [testimonials]);
 
-    // ── Stats ─────────────────────────────────────────────────────────────────────
+    // ── Stats ─────────────────────────────────────────────────────────────────
     const stats = {
         totalRevenue: orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0),
         totalOrders: orders.length,
@@ -204,8 +264,9 @@ export const AdminProvider = ({ children }) => {
 
     return (
         <AdminContext.Provider value={{
+            loading,
             products, addProduct, updateProduct, deleteProduct, toggleFeatured,
-            orders, updateOrderStatus, addOrder, updateOrder, deleteOrder,
+            orders, updateOrderStatus, addOrder, updateOrder, deleteOrder, softDeleteOrder, restoreOrder,
             settings, updateSettings,
             testimonials, addTestimonial, updateTestimonial, deleteTestimonial,
             adminUser, adminLogin, adminLogout,

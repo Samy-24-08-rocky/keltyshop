@@ -1,70 +1,77 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import {
+    subscribeWishlist,
+    addToWishlistFS,
+    removeFromWishlistFS,
+    subscribeUserOrders,
+    placeUserOrderFS,
+} from '../services/firestoreService';
 
-// User data (wishlist + orders) is stored per Firebase UID in localStorage
-// so each user sees only their own data
+// User data (wishlist + orders) is stored per Firebase UID in Firestore
+// so each user sees only their own data — persists across devices & browsers
 
 const UserDataContext = createContext(null);
 
 export const UserDataProvider = ({ children }) => {
     const { user } = useAuth();
-    const uid = user?.uid ?? 'guest';
+    const uid = user?.uid ?? null;
 
-    const storageKey = (type) => `kelty_${type}_${uid}`;
+    const [wishlist, setWishlist] = useState([]);
+    const [orders, setOrders] = useState([]);
 
-    const [wishlist, setWishlist] = useState(() => {
-        try { return JSON.parse(localStorage.getItem(storageKey('wishlist'))) || []; }
-        catch { return []; }
-    });
-
-    const [orders, setOrders] = useState(() => {
-        try { return JSON.parse(localStorage.getItem(storageKey('orders'))) || []; }
-        catch { return []; }
-    });
-
-    // Re-load when user changes (login/logout)
+    // ── Subscribe to Firestore when user logs in, clear on logout ─────────────
     useEffect(() => {
-        try {
-            setWishlist(JSON.parse(localStorage.getItem(storageKey('wishlist'))) || []);
-            setOrders(JSON.parse(localStorage.getItem(storageKey('orders'))) || []);
-        } catch { /* ignore */ }
-    }, [uid]); // eslint-disable-line
+        if (!uid) {
+            setWishlist([]);
+            setOrders([]);
+            return;
+        }
 
-    // Persist wishlist
-    useEffect(() => {
-        localStorage.setItem(storageKey('wishlist'), JSON.stringify(wishlist));
-    }, [wishlist, uid]); // eslint-disable-line
+        const unsubWishlist = subscribeWishlist(uid, setWishlist);
+        const unsubOrders = subscribeUserOrders(uid, (data) => {
+            // Sort newest first
+            setOrders([...data].sort((a, b) => {
+                const ta = a.createdAt?.seconds ?? 0;
+                const tb = b.createdAt?.seconds ?? 0;
+                return tb - ta;
+            }));
+        });
 
-    // Persist orders
-    useEffect(() => {
-        localStorage.setItem(storageKey('orders'), JSON.stringify(orders));
-    }, [orders, uid]); // eslint-disable-line
+        return () => {
+            unsubWishlist();
+            unsubOrders();
+        };
+    }, [uid]);
 
-    // ── Wishlist helpers ─────────────────────────────────────────────────────────
-    const addToWishlist = useCallback((product) => {
-        setWishlist(prev =>
-            prev.find(p => p.id === product.id) ? prev : [...prev, product]
-        );
-    }, []);
+    // ── Wishlist helpers ──────────────────────────────────────────────────────
+    const addToWishlist = useCallback(async (product) => {
+        if (!uid) return;
+        await addToWishlistFS(uid, product);
+    }, [uid]);
 
-    const removeFromWishlist = useCallback((productId) => {
-        setWishlist(prev => prev.filter(p => p.id !== productId));
-    }, []);
+    const removeFromWishlist = useCallback(async (productId) => {
+        if (!uid) return;
+        await removeFromWishlistFS(uid, productId);
+    }, [uid]);
 
-    const toggleWishlist = useCallback((product) => {
-        setWishlist(prev =>
-            prev.find(p => p.id === product.id)
-                ? prev.filter(p => p.id !== product.id)
-                : [...prev, product]
-        );
-    }, []);
+    const toggleWishlist = useCallback(async (product) => {
+        if (!uid) return;
+        const already = wishlist.find(p => p.id === product.id);
+        if (already) {
+            await removeFromWishlistFS(uid, product.id);
+        } else {
+            await addToWishlistFS(uid, product);
+        }
+    }, [uid, wishlist]);
 
     const isWishlisted = useCallback((productId) => {
         return wishlist.some(p => p.id === productId);
     }, [wishlist]);
 
-    // ── Orders helpers ───────────────────────────────────────────────────────────
-    const placeOrder = useCallback((cartItems, delivery, totals) => {
+    // ── Orders helpers ────────────────────────────────────────────────────────
+    const placeOrder = useCallback(async (cartItems, delivery, totals) => {
+        if (!uid) return null;
         const order = {
             id: `ORD-${Date.now()}`,
             date: new Date().toLocaleDateString('en-GB'),
@@ -76,9 +83,9 @@ export const UserDataProvider = ({ children }) => {
             total: totals.total,
             status: 'processing',
         };
-        setOrders(prev => [order, ...prev]);
+        await placeUserOrderFS(uid, order);
         return order;
-    }, []);
+    }, [uid]);
 
     return (
         <UserDataContext.Provider value={{

@@ -3,8 +3,8 @@ import { useAdmin } from '../../context/AdminContext';
 import {
     FiSearch, FiChevronDown, FiPlus, FiEdit2, FiTrash2,
     FiX, FiCheck, FiAlertTriangle, FiUser, FiMail,
-    FiMapPin, FiTruck, FiPackage, FiDollarSign, FiCalendar,
-    FiClock, FiBell
+    FiMapPin, FiPackage, FiDollarSign, FiCalendar,
+    FiClock, FiBell, FiRotateCcw, FiAlertOctagon
 } from 'react-icons/fi';
 
 const STATUS_OPTIONS = ['processing', 'confirmed', 'out_for_delivery', 'delivered', 'cancelled'];
@@ -48,23 +48,29 @@ const inputSx = {
 };
 
 export default function AdminOrders() {
-    const { orders, updateOrderStatus, addOrder, updateOrder, deleteOrder } = useAdmin();
+    const { orders, updateOrderStatus, addOrder, updateOrder, deleteOrder, softDeleteOrder, restoreOrder } = useAdmin();
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
     const [expanded, setExpanded] = useState(null);
     const [modal, setModal] = useState(null);
     const [form, setForm] = useState(BLANK_ORDER);
     const [editId, setEditId] = useState(null);
+    const [trashView, setTrashView] = useState(false);
+    // confirm: null | { id, step: 'soft' | 'permanent' }
     const [confirm, setConfirm] = useState(null);
 
     // Confirm-order modal
-    const [confirmModal, setConfirmModal] = useState(null); // order object
+    const [confirmModal, setConfirmModal] = useState(null);
     const [deliveryTime, setDeliveryTime] = useState('');
     const [estimatedDate, setEstimatedDate] = useState('');
 
     const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
-    const filtered = orders.filter(o => {
+    // Separate active from trashed
+    const activeOrders = orders.filter(o => !o._deleted);
+    const trashedOrders = orders.filter(o => o._deleted);
+
+    const filtered = activeOrders.filter(o => {
         const matchFilter = filter === 'all' || o.status === filter;
         const matchSearch = o.id.toLowerCase().includes(search.toLowerCase())
             || (o.customer || '').toLowerCase().includes(search.toLowerCase())
@@ -91,7 +97,6 @@ export default function AdminOrders() {
         setModal(null);
     };
 
-    // Confirm order → set status to 'confirmed' + save delivery time
     const openConfirmOrder = (o) => {
         setConfirmModal(o);
         setDeliveryTime('');
@@ -113,159 +118,237 @@ export default function AdminOrders() {
         <div>
             {/* ── Toolbar ── */}
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-                    <FiSearch size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
-                    <input
-                        value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="Search by ID, customer or email…"
-                        style={{ ...inputSx, paddingLeft: '2.25rem' }}
-                    />
-                </div>
 
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {['all', ...STATUS_OPTIONS].map(s => (
-                        <button key={s} onClick={() => setFilter(s)} style={{
-                            padding: '0.45rem 0.875rem', borderRadius: 99, border: '1px solid', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, transition: 'all .15s',
-                            background: filter === s ? (STATUS_CONFIG[s]?.bg || 'rgba(248,250,252,0.12)') : 'transparent',
-                            borderColor: filter === s ? (STATUS_CONFIG[s]?.color || 'rgba(255,255,255,0.2)') : 'rgba(255,255,255,0.1)',
-                            color: filter === s ? (STATUS_CONFIG[s]?.color || '#f1f5f9') : '#64748b',
-                        }}>
-                            {s === 'all' ? 'All' : STATUS_CONFIG[s]?.label || s}
-                        </button>
-                    ))}
-                </div>
-
-                <button onClick={openAdd} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    padding: '0.6rem 1.1rem', borderRadius: 10, border: 'none', cursor: 'pointer',
-                    background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white',
-                    fontWeight: 600, fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(239,68,68,0.3)', flexShrink: 0,
+                {/* Trash toggle */}
+                <button onClick={() => setTrashView(v => !v)} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.45rem',
+                    padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid',
+                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, transition: 'all .15s',
+                    background: trashView ? 'rgba(239,68,68,0.12)' : 'transparent',
+                    borderColor: trashView ? '#ef4444' : 'rgba(255,255,255,0.12)',
+                    color: trashView ? '#fca5a5' : '#64748b',
                 }}>
-                    <FiPlus size={15} /> New Order
+                    <FiTrash2 size={13} />
+                    Trash
+                    {trashedOrders.length > 0 && (
+                        <span style={{ background: '#ef4444', color: 'white', borderRadius: 99, padding: '1px 6px', fontSize: '0.7rem', marginLeft: 2 }}>
+                            {trashedOrders.length}
+                        </span>
+                    )}
                 </button>
-            </div>
 
-            <div style={{ color: '#475569', fontSize: '0.78rem', marginBottom: '0.75rem' }}>
-                Showing {filtered.length} of {orders.length} orders
-            </div>
-
-            {/* ── Order Cards ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {filtered.map(o => (
-                    <div key={o.id} style={{
-                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s',
-                    }}>
-                        {/* Header row */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.9rem 1.25rem', cursor: 'pointer', flexWrap: 'wrap' }}
-                            onClick={() => setExpanded(expanded === o.id ? null : o.id)}>
-                            <div style={{ flex: 1, minWidth: 110 }}>
-                                <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.875rem' }}>{o.id}</div>
-                                <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{o.date}</div>
-                            </div>
-                            <div style={{ flex: 2, minWidth: 150 }}>
-                                <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{o.customer}</div>
-                                <div style={{ color: '#475569', fontSize: '0.72rem' }}>{o.email}</div>
-                            </div>
-                            <div style={{ minWidth: 90, textAlign: 'right' }}>
-                                <div style={{ fontWeight: 700, color: '#f1f5f9' }}>£{Number(o.total).toFixed(2)}</div>
-                                <div style={{ color: '#475569', fontSize: '0.72rem' }}>{o.items} item{o.items !== 1 ? 's' : ''}</div>
-                            </div>
-                            <Badge status={o.status} />
-
-                            {/* Confirm shortcut — only for new/processing orders */}
-                            {o.status === 'processing' && (
-                                <button
-                                    onClick={e => { e.stopPropagation(); openConfirmOrder(o); }}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '0.35rem',
-                                        padding: '0.4rem 0.875rem', borderRadius: 8, border: 'none', cursor: 'pointer',
-                                        background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white',
-                                        fontWeight: 600, fontSize: '0.75rem', boxShadow: '0 2px 8px rgba(99,102,241,0.35)',
-                                    }}
-                                >
-                                    <FiCheck size={12} /> Confirm Order
-                                </button>
-                            )}
-
-                            <div style={{ display: 'flex', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
-                                <button onClick={() => openEdit(o)} title="Edit" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
-                                    <FiEdit2 size={13} />
-                                </button>
-                                <button onClick={() => setConfirm(o.id)} title="Delete" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
-                                    <FiTrash2 size={13} />
-                                </button>
-                            </div>
-
-                            <FiChevronDown size={15} color="#475569" style={{ transform: expanded === o.id ? 'rotate(180deg)' : 'none', transition: 'transform .2s', flexShrink: 0 }} />
+                {!trashView && (
+                    <>
+                        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+                            <FiSearch size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
+                            <input
+                                value={search} onChange={e => setSearch(e.target.value)}
+                                placeholder="Search by ID, customer or email…"
+                                style={{ ...inputSx, paddingLeft: '2.25rem' }}
+                            />
                         </div>
 
-                        {/* Expanded detail */}
-                        {expanded === o.id && (
-                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '1.25rem', background: 'rgba(0,0,0,0.15)' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
-                                    <div>
-                                        <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Customer Email</div>
-                                        <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>{o.email || '—'}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Phone</div>
-                                        <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>{o.phone || '—'}</div>
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Delivery Address</div>
-                                        <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>{o.address || '—'}</div>
-                                    </div>
-                                    {o.deliveryTime && (
-                                        <div>
-                                            <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Delivery Time / Date</div>
-                                            <div style={{ color: '#818cf8', fontSize: '0.85rem', fontWeight: 600 }}>
-                                                {o.deliveryTime}{o.estimatedDelivery ? ` · ${o.estimatedDelivery}` : ''}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* Products list */}
-                                    {o.products && o.products.length > 0 && (
-                                        <div style={{ gridColumn: '1 / -1' }}>
-                                            <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>Items Ordered</div>
-                                            {o.products.map((p, i) => (
-                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontSize: '0.82rem', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                                                    <span>{p.name} × {p.qty}</span>
-                                                    <span>£{(p.price * p.qty).toFixed(2)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            {['all', ...STATUS_OPTIONS].map(s => (
+                                <button key={s} onClick={() => setFilter(s)} style={{
+                                    padding: '0.45rem 0.875rem', borderRadius: 99, border: '1px solid', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, transition: 'all .15s',
+                                    background: filter === s ? (STATUS_CONFIG[s]?.bg || 'rgba(248,250,252,0.12)') : 'transparent',
+                                    borderColor: filter === s ? (STATUS_CONFIG[s]?.color || 'rgba(255,255,255,0.2)') : 'rgba(255,255,255,0.1)',
+                                    color: filter === s ? (STATUS_CONFIG[s]?.color || '#f1f5f9') : '#64748b',
+                                }}>
+                                    {s === 'all' ? 'All' : STATUS_CONFIG[s]?.label || s}
+                                </button>
+                            ))}
+                        </div>
 
-                                {/* Quick status update */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-                                    <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Change status:</span>
-                                    {STATUS_OPTIONS.filter(s => s !== o.status).map(s => (
-                                        <button key={s} onClick={() => updateOrderStatus(o.id, s)} style={{
-                                            padding: '0.35rem 0.75rem', borderRadius: 99,
-                                            border: `1px solid ${STATUS_CONFIG[s].color}`,
-                                            background: STATUS_CONFIG[s].bg, color: STATUS_CONFIG[s].color,
-                                            cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
-                                        }}>
-                                            → {STATUS_CONFIG[s].label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ))}
-                {filtered.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>No orders found.</div>
+                        <button onClick={openAdd} style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            padding: '0.6rem 1.1rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                            background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white',
+                            fontWeight: 600, fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(239,68,68,0.3)', flexShrink: 0,
+                        }}>
+                            <FiPlus size={15} /> New Order
+                        </button>
+                    </>
                 )}
             </div>
+
+            {/* ══ TRASH VIEW ══ */}
+            {trashView ? (
+                <div>
+                    <div style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                        🗑️ {trashedOrders.length} order{trashedOrders.length !== 1 ? 's' : ''} in trash — restore or permanently delete below.
+                    </div>
+                    {trashedOrders.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>Trash is empty.</div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                            {trashedOrders.map(o => (
+                                <div key={o.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
+                                    background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.18)',
+                                    borderRadius: 12, padding: '0.85rem 1.2rem',
+                                }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 700, color: '#fca5a5', fontSize: '0.85rem' }}>{o.id}</div>
+                                        <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{o.customer} · {o.date}</div>
+                                    </div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.82rem' }}>£{Number(o.total).toFixed(2)}</div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            onClick={() => restoreOrder(o.id)}
+                                            title="Restore order"
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                                                padding: '0.4rem 0.875rem', borderRadius: 8, border: 'none', cursor: 'pointer',
+                                                background: 'rgba(34,197,94,0.15)', color: '#86efac',
+                                                fontWeight: 600, fontSize: '0.78rem',
+                                            }}
+                                        >
+                                            <FiRotateCcw size={12} /> Restore
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirm({ id: o.id, step: 'permanent' })}
+                                            title="Delete permanently"
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                                                padding: '0.4rem 0.875rem', borderRadius: 8, border: 'none', cursor: 'pointer',
+                                                background: 'rgba(239,68,68,0.18)', color: '#fca5a5',
+                                                fontWeight: 600, fontSize: '0.78rem',
+                                            }}
+                                        >
+                                            <FiAlertOctagon size={12} /> Delete Forever
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* ══ ACTIVE ORDERS ══ */
+                <div>
+                    <div style={{ color: '#475569', fontSize: '0.78rem', marginBottom: '0.75rem' }}>
+                        Showing {filtered.length} of {activeOrders.length} orders
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {filtered.map(o => (
+                            <div key={o.id} style={{
+                                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s',
+                            }}>
+                                {/* Header row */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.9rem 1.25rem', cursor: 'pointer', flexWrap: 'wrap' }}
+                                    onClick={() => setExpanded(expanded === o.id ? null : o.id)}>
+                                    <div style={{ flex: 1, minWidth: 110 }}>
+                                        <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.875rem' }}>{o.id}</div>
+                                        <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{o.date}</div>
+                                    </div>
+                                    <div style={{ flex: 2, minWidth: 150 }}>
+                                        <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{o.customer}</div>
+                                        <div style={{ color: '#475569', fontSize: '0.72rem' }}>{o.email}</div>
+                                    </div>
+                                    <div style={{ minWidth: 90, textAlign: 'right' }}>
+                                        <div style={{ fontWeight: 700, color: '#f1f5f9' }}>£{Number(o.total).toFixed(2)}</div>
+                                        <div style={{ color: '#475569', fontSize: '0.72rem' }}>{o.items} item{o.items !== 1 ? 's' : ''}</div>
+                                    </div>
+                                    <Badge status={o.status} />
+
+                                    {/* Confirm shortcut */}
+                                    {o.status === 'processing' && (
+                                        <button
+                                            onClick={e => { e.stopPropagation(); openConfirmOrder(o); }}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                                                padding: '0.4rem 0.875rem', borderRadius: 8, border: 'none', cursor: 'pointer',
+                                                background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white',
+                                                fontWeight: 600, fontSize: '0.75rem', boxShadow: '0 2px 8px rgba(99,102,241,0.35)',
+                                            }}
+                                        >
+                                            <FiCheck size={12} /> Confirm Order
+                                        </button>
+                                    )}
+
+                                    <div style={{ display: 'flex', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => openEdit(o)} title="Edit" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
+                                            <FiEdit2 size={13} />
+                                        </button>
+                                        {/* Move to trash */}
+                                        <button onClick={() => setConfirm({ id: o.id, step: 'soft' })} title="Move to Trash" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
+                                            <FiTrash2 size={13} />
+                                        </button>
+                                    </div>
+
+                                    <FiChevronDown size={15} color="#475569" style={{ transform: expanded === o.id ? 'rotate(180deg)' : 'none', transition: 'transform .2s', flexShrink: 0 }} />
+                                </div>
+
+                                {/* Expanded detail */}
+                                {expanded === o.id && (
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '1.25rem', background: 'rgba(0,0,0,0.15)' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Customer Email</div>
+                                                <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>{o.email || '—'}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Phone</div>
+                                                <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>{o.phone || '—'}</div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Delivery Address</div>
+                                                <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>{o.address || '—'}</div>
+                                            </div>
+                                            {o.deliveryTime && (
+                                                <div>
+                                                    <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Delivery Time / Date</div>
+                                                    <div style={{ color: '#818cf8', fontSize: '0.85rem', fontWeight: 600 }}>
+                                                        {o.deliveryTime}{o.estimatedDelivery ? ` · ${o.estimatedDelivery}` : ''}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {o.products && o.products.length > 0 && (
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>Items Ordered</div>
+                                                    {o.products.map((p, i) => (
+                                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontSize: '0.82rem', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                            <span>{p.name} × {p.qty}</span>
+                                                            <span>£{(p.price * p.qty).toFixed(2)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Quick status update */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Change status:</span>
+                                            {STATUS_OPTIONS.filter(s => s !== o.status).map(s => (
+                                                <button key={s} onClick={() => updateOrderStatus(o.id, s)} style={{
+                                                    padding: '0.35rem 0.75rem', borderRadius: 99,
+                                                    border: `1px solid ${STATUS_CONFIG[s].color}`,
+                                                    background: STATUS_CONFIG[s].bg, color: STATUS_CONFIG[s].color,
+                                                    cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                                                }}>
+                                                    → {STATUS_CONFIG[s].label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {filtered.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>No orders found.</div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* ── Confirm Order Modal ── */}
             {confirmModal && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div style={{ background: '#1a2537', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 20, padding: '2rem', width: '100%', maxWidth: 460, boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
-                        {/* Header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1.5rem' }}>
                             <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <FiBell size={22} color="#818cf8" />
@@ -279,7 +362,6 @@ export default function AdminOrders() {
                             </button>
                         </div>
 
-                        {/* Delivery time input */}
                         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: '1.25rem', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '1.25rem' }}>
                             <Field label="Delivery Time Slot" icon={FiClock}>
                                 <input
@@ -303,7 +385,6 @@ export default function AdminOrders() {
                             </p>
                         </div>
 
-                        {/* Items summary */}
                         <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, padding: '0.875rem 1.1rem', marginBottom: '1.5rem', fontSize: '0.82rem', color: '#a5b4fc' }}>
                             💬 Confirming will notify the customer their order is accepted and will be delivered within the time you set above.
                         </div>
@@ -320,24 +401,59 @@ export default function AdminOrders() {
                 </div>
             )}
 
-            {/* ── Delete Confirm Modal ── */}
+            {/* ── Delete Modal (soft → trash OR permanent) ── */}
             {confirm && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: '#1e2a3a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '2rem', maxWidth: 360, width: '90%', textAlign: 'center' }}>
+                    <div style={{
+                        background: '#1e2a3a',
+                        border: `1px solid ${confirm.step === 'permanent' ? 'rgba(239,68,68,0.5)' : 'rgba(255,165,0,0.3)'}`,
+                        borderRadius: 20, padding: '2rem', maxWidth: 380, width: '90%', textAlign: 'center',
+                    }}>
                         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                            <FiAlertTriangle size={26} color="#ef4444" />
+                            {confirm.step === 'permanent'
+                                ? <FiAlertOctagon size={26} color="#ef4444" />
+                                : <FiTrash2 size={26} color="#f97316" />}
                         </div>
-                        <h3 style={{ color: '#f1f5f9', margin: '0 0 0.5rem', fontWeight: 700 }}>Delete Order?</h3>
-                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                            Order <code style={{ color: '#a5b4fc' }}>{confirm}</code>
-                        </p>
-                        <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '1.5rem' }}>This cannot be undone.</p>
-                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                            <button onClick={() => setConfirm(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
-                            <button onClick={() => { deleteOrder(confirm); setConfirm(null); setExpanded(null); }} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', cursor: 'pointer', fontWeight: 600 }}>
-                                Delete
-                            </button>
-                        </div>
+
+                        {confirm.step === 'soft' ? (
+                            <>
+                                <h3 style={{ color: '#f1f5f9', margin: '0 0 0.5rem', fontWeight: 700 }}>Move to Trash?</h3>
+                                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                                    Order <code style={{ color: '#a5b4fc' }}>{confirm.id}</code> will be moved to trash.
+                                </p>
+                                <p style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '1.5rem' }}>
+                                    You can restore it anytime from the <strong style={{ color: '#94a3b8' }}>Trash</strong> tab.
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                                    <button onClick={() => setConfirm(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+                                    <button
+                                        onClick={() => { softDeleteOrder(confirm.id); setConfirm(null); setExpanded(null); }}
+                                        style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                                    >
+                                        Move to Trash
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <h3 style={{ color: '#ef4444', margin: '0 0 0.5rem', fontWeight: 700 }}>Delete Forever?</h3>
+                                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                                    Order <code style={{ color: '#fca5a5' }}>{confirm.id}</code>
+                                </p>
+                                <p style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, marginBottom: '1.5rem' }}>
+                                    ⚠️ This will permanently delete from Firestore. Cannot be undone.
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                                    <button onClick={() => setConfirm(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+                                    <button
+                                        onClick={() => { deleteOrder(confirm.id); setConfirm(null); }}
+                                        style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                                    >
+                                        Delete Forever
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
