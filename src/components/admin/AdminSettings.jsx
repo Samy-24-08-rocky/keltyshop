@@ -55,7 +55,7 @@ const Section = ({ title, children }) => (
 const ICONS = { standard: FiTruck, express: FiZap, sameday: FiClock };
 
 export default function AdminSettings() {
-    const { settings, updateSettings } = useAdmin();
+    const { settings, updateSettings, products } = useAdmin();
     const [local, setLocal] = useState({ ...settings });
     const [saved, setSaved] = useState(false);
 
@@ -120,6 +120,49 @@ export default function AdminSettings() {
             <Section title="🏪 Store Identity">
                 <Field label="Store Name"><TextInput value={local.storeName} onChange={e => set('storeName', e.target.value)} /></Field>
                 <Field label="Tagline"><TextInput value={local.tagline} onChange={e => set('tagline', e.target.value)} /></Field>
+            </Section>
+
+            {/* ── Hero Product Spotlight ── */}
+            <Section title="🌟 Homepage Hero — Featured Product Card">
+                <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: 0, marginBottom: '1rem' }}>
+                    Choose which product appears in the floating card on the homepage hero image.
+                    Customers can click it to go directly to that product page.
+                </p>
+                <Field label="Select Product to Spotlight">
+                    <select
+                        value={local.heroProductId || ''}
+                        onChange={e => set('heroProductId', Number(e.target.value))}
+                        style={{ ...inp, cursor: 'pointer' }}
+                    >
+                        <option value="">— Choose a product —</option>
+                        {[...products]
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name} — £{Number(p.price).toFixed(2)}{p.stock === 0 ? ' (OUT OF STOCK)' : ''}
+                                </option>
+                            ))
+                        }
+                    </select>
+                </Field>
+                {/* Live preview of selected product */}
+                {local.heroProductId && (() => {
+                    const sel = products.find(p => p.id === local.heroProductId);
+                    if (!sel) return null;
+                    return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 12, padding: '0.875rem 1rem' }}>
+                            <img src={sel.image} alt={sel.name} style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }} onError={e => e.target.style.display = 'none'} />
+                            <div style={{ flex: 1 }}>
+                                <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '0.88rem' }}>{sel.name}</div>
+                                <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '0.15rem' }}>⭐ {sel.rating} · {sel.category} · Stock: {sel.stock}</div>
+                            </div>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ color: '#10b981', fontWeight: 800, fontSize: '1rem' }}>£{Number(sel.price).toFixed(2)}</div>
+                                {sel.oldPrice && <div style={{ color: '#475569', fontSize: '0.7rem', textDecoration: 'line-through' }}>£{Number(sel.oldPrice).toFixed(2)}</div>}
+                            </div>
+                        </div>
+                    );
+                })()}
             </Section>
 
             {/* ── Delivery Options ── */}
