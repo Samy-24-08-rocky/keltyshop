@@ -30,7 +30,11 @@ const Navbar = ({ toggleCart, cartCount }) => {
       if (isSearchOpen && !e.target.closest('.search-box')) setIsSearchOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [isMenuOpen, isUserMenuOpen, isSearchOpen]);
 
   const handleSearch = (e) => {
@@ -372,12 +376,13 @@ const Navbar = ({ toggleCart, cartCount }) => {
           align-items: center; justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
         }
         .hamburger:hover { background: #fff1f2; color: #ef4444; border-color: #fecaca; }
 
         /* Mobile drawer */
         .mobile-drawer {
-          display: none;
           background: white;
           border-top: 1px solid #f3f4f6;
           box-shadow: 0 8px 24px rgba(0,0,0,0.08);
@@ -390,11 +395,14 @@ const Navbar = ({ toggleCart, cartCount }) => {
         .mobile-drawer-inner { padding: 1rem 1.25rem 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
         .mobile-link {
           display: flex; align-items: center;
-          padding: 0.6rem 0.875rem;
+          padding: 0.75rem 0.875rem;
           border-radius: 10px;
           font-size: 0.9rem; font-weight: 500;
           color: #374151; text-decoration: none;
           transition: background 0.15s, color 0.15s;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+          min-height: 44px;
         }
         .mobile-link:hover, .mobile-link.active { background: #fff1f2; color: #ef4444; }
         .mobile-search {
@@ -429,7 +437,17 @@ const Navbar = ({ toggleCart, cartCount }) => {
           .btn-signin, .btn-register { display: none !important; }
           .icon-btn.admin { display: none; }
           .hamburger { display: flex; }
-          .mobile-drawer { display: block; }
+        }
+
+        /* Ensure all interactive elements have no tap highlight on mobile */
+        @media (hover: none) and (pointer: coarse) {
+          .icon-btn, .avatar-btn, .search-btn, .nav-link, .dropdown-item {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+          }
+          .icon-btn:hover, .avatar-btn:hover {
+            transform: none;
+          }
         }
 
         @media (max-width: 500px) {

@@ -38,6 +38,38 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Global touch fixes ──────────────────────────────────────────────────── */
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* On touch devices, product action buttons are always visible */
+@media (hover: none) and (pointer: coarse) {
+  .product-actions {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+  }
+
+  .product-card:hover,
+  .category-card:hover,
+  .deal-card:hover,
+  .testimonial-card:hover {
+    transform: none;
+  }
+
+  .product-card:hover .product-img-wrap img,
+  .deal-card:hover .deal-img img {
+    transform: none;
+  }
+
+  .category-card:hover .cat-icon-wrap {
+    transform: none;
+  }
+}
+
 /* ── Scrollbar ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
