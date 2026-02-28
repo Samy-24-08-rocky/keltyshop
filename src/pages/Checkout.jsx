@@ -60,6 +60,7 @@ const Checkout = ({ cartItems = [], clearCart }) => {
       status: 'processing',
       delivery: 'Standard',
       products: cartItems.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price })),
+      cartItems: cartItems.map(i => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price })),
     };
     addOrder(newOrder);
 

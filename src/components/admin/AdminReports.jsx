@@ -417,36 +417,48 @@ export default function AdminReports() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {/* ── Per-item lines (from real order.products) ── */}
-                                    {invoiceOrder.products && invoiceOrder.products.length > 0 ? (
-                                        invoiceOrder.products.map((item, idx) => {
-                                            const lineTotal = Number(item.price) * Number(item.qty || item.quantity || 1);
-                                            return (
-                                                <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                                    <td style={{ padding: '12px 12px', color: '#9ca3af', fontSize: 13, verticalAlign: 'top' }}>{idx + 1}</td>
-                                                    <td style={{ padding: '12px 12px', verticalAlign: 'top' }}>
-                                                        <div style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>{item.name}</div>
-                                                        {item.category && <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>{item.category}</div>}
-                                                    </td>
-                                                    <td style={{ padding: '12px 12px', textAlign: 'right', color: '#374151', fontSize: 13, verticalAlign: 'top' }}>{item.qty || item.quantity || 1}</td>
-                                                    <td style={{ padding: '12px 12px', textAlign: 'right', color: '#374151', fontSize: 13, verticalAlign: 'top' }}>£{Number(item.price).toFixed(2)}</td>
-                                                    <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 700, color: '#111827', fontSize: 13, verticalAlign: 'top' }}>£{lineTotal.toFixed(2)}</td>
-                                                </tr>
-                                            );
-                                        })
-                                    ) : (
-                                        /* Fallback for older orders that have no product breakdown */
-                                        <tr>
-                                            <td style={{ padding: '14px 12px', color: '#9ca3af', fontSize: 13 }}>1</td>
-                                            <td style={{ padding: '14px 12px' }}>
-                                                <div style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>Grocery Order — {invoiceOrder.id}</div>
-                                                <div style={{ color: '#6b7280', fontSize: 12 }}>{invoiceOrder.delivery} Delivery · {invoiceOrder.items} item{invoiceOrder.items !== 1 ? 's' : ''}</div>
-                                            </td>
-                                            <td style={{ padding: '14px 12px', textAlign: 'right', color: '#374151', fontSize: 13 }}>1</td>
-                                            <td style={{ padding: '14px 12px', textAlign: 'right', color: '#374151', fontSize: 13 }}>{fmt(invoiceOrder.total)}</td>
-                                            <td style={{ padding: '14px 12px', textAlign: 'right', fontWeight: 600, color: '#111827', fontSize: 13 }}>{fmt(invoiceOrder.total)}</td>
-                                        </tr>
-                                    )}
+                                    {/* Use cartItems (checkout/POS) OR products (legacy) if available */}
+                                    {(() => {
+                                        const lineItems =
+                                            (invoiceOrder.cartItems && invoiceOrder.cartItems.length > 0)
+                                                ? invoiceOrder.cartItems
+                                                : (invoiceOrder.products && invoiceOrder.products.length > 0)
+                                                    ? invoiceOrder.products
+                                                    : null;
+                                        if (lineItems) {
+                                            return lineItems.map((item, idx) => {
+                                                const qty = Number(item.quantity || item.qty || 1);
+                                                const price = Number(item.price || 0);
+                                                const lineTotal = price * qty;
+                                                return (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                                        <td style={{ padding: '12px 12px', color: '#9ca3af', fontSize: 13, verticalAlign: 'top' }}>{idx + 1}</td>
+                                                        <td style={{ padding: '12px 12px', verticalAlign: 'top' }}>
+                                                            <div style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>{item.name}</div>
+                                                            {item.category && <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }}>{item.category}</div>}
+                                                        </td>
+                                                        <td style={{ padding: '12px 12px', textAlign: 'right', color: '#374151', fontSize: 13, verticalAlign: 'top' }}>{qty}</td>
+                                                        <td style={{ padding: '12px 12px', textAlign: 'right', color: '#374151', fontSize: 13, verticalAlign: 'top' }}>£{price.toFixed(2)}</td>
+                                                        <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 700, color: '#111827', fontSize: 13, verticalAlign: 'top' }}>£{lineTotal.toFixed(2)}</td>
+                                                    </tr>
+                                                );
+                                            });
+                                        }
+                                        /* Fallback: older seed orders with no product breakdown */
+                                        return (
+                                            <tr>
+                                                <td style={{ padding: '14px 12px', color: '#9ca3af', fontSize: 13 }}>1</td>
+                                                <td style={{ padding: '14px 12px' }}>
+                                                    <div style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>Grocery Order — {invoiceOrder.id}</div>
+                                                    <div style={{ color: '#6b7280', fontSize: 12 }}>{invoiceOrder.delivery} · {invoiceOrder.items} item{invoiceOrder.items !== 1 ? 's' : ''}</div>
+                                                    <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 3 }}>Product breakdown not available for this order</div>
+                                                </td>
+                                                <td style={{ padding: '14px 12px', textAlign: 'right', color: '#374151', fontSize: 13 }}>1</td>
+                                                <td style={{ padding: '14px 12px', textAlign: 'right', color: '#374151', fontSize: 13 }}>{fmt(invoiceOrder.total)}</td>
+                                                <td style={{ padding: '14px 12px', textAlign: 'right', fontWeight: 600, color: '#111827', fontSize: 13 }}>{fmt(invoiceOrder.total)}</td>
+                                            </tr>
+                                        );
+                                    })()}
                                 </tbody>
                             </table>
 
@@ -454,10 +466,16 @@ export default function AdminReports() {
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2rem' }}>
                                 <div style={{ minWidth: 280 }}>
                                     {(() => {
-                                        // Compute subtotal from individual products if we have them
-                                        const itemsSubtotal = invoiceOrder.products && invoiceOrder.products.length > 0
-                                            ? invoiceOrder.products.reduce((s, p) => s + Number(p.price) * Number(p.qty || p.quantity || 1), 0)
-                                            : invoiceOrder.total / (1 + tax / 100);
+                                        // Compute subtotal from cartItems, then products, then back-calculate
+                                        const lineItems =
+                                            (invoiceOrder.cartItems && invoiceOrder.cartItems.length > 0)
+                                                ? invoiceOrder.cartItems
+                                                : (invoiceOrder.products && invoiceOrder.products.length > 0)
+                                                    ? invoiceOrder.products
+                                                    : null;
+                                        const itemsSubtotal = lineItems
+                                            ? lineItems.reduce((s, p) => s + Number(p.price) * Number(p.quantity || p.qty || 1), 0)
+                                            : Number(invoiceOrder.total) / (1 + tax / 100);
                                         const taxAmt = itemsSubtotal * (tax / 100);
                                         const grandTotal = itemsSubtotal + taxAmt;
                                         return (
