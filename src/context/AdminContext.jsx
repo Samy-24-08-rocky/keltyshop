@@ -245,15 +245,23 @@ export const AdminProvider = ({ children }) => {
     // Permanent delete — removes from Firestore and local state immediately
     const deleteOrder = useCallback(async (id) => {
         const target = orders.find(o => o.id === id);
-        if (!target) return;
+        if (!target) { console.warn('deleteOrder: order not found', id); return; }
+
+        // _docId is the Firestore document ID from the real-time listener.
+        // For seeded orders the Firestore doc ID matches the order's own id field.
+        const firestoreDocId = target._docId || target.id;
+        console.log('deleteOrder → Firestore docId:', firestoreDocId, '| order:', target);
+
         // Optimistic remove from local state immediately
         setOrders(prev => prev.filter(o => o.id !== id));
         try {
-            if (target._docId) await deleteOrderFS(target._docId);
+            await deleteOrderFS(firestoreDocId);
+            console.log('deleteOrder → success:', firestoreDocId);
         } catch (err) {
-            console.error('deleteOrder failed:', err);
-            // Rollback if Firestore delete failed
+            console.error('deleteOrder → FAILED:', err);
+            // Rollback UI if Firestore delete failed
             setOrders(prev => [...prev, target]);
+            alert(`Delete failed: ${err.message}\nCheck browser console for details.`);
         }
     }, [orders]);
 
