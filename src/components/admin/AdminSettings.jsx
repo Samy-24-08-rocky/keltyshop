@@ -166,12 +166,12 @@ export default function AdminSettings() {
             </Section>
 
             {/* ── Delivery Options ── */}
-            <Section title="🚚 Delivery Options & Times">
+            <Section title="🚀 Same-Day Delivery Settings">
                 <p style={{ color: '#64748b', fontSize: '0.8rem', marginBottom: '1.25rem', marginTop: 0 }}>
                     Configure each delivery tier — name, description, estimated time, price, and whether it's available to customers.
                 </p>
 
-                {deliveryOptions.map(opt => {
+                {deliveryOptions.filter(opt => opt.id === 'sameday').map(opt => {
                     const Icon = ICONS[opt.id] || FiTruck;
                     return (
                         <div key={opt.id} style={{
