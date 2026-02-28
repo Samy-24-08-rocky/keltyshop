@@ -509,7 +509,7 @@ const Navbar = ({ toggleCart, cartCount }) => {
             <span key={i} style={{ display: 'inline-flex', alignItems: 'center' }}>
               <span className="announce-item">🛒 Now delivering <strong>same day</strong> in Kelty!</span>
               <span className="announce-dot" />
-              <span className="announce-item">🚚 Order before <strong>1 pm</strong> — arrive by 9 pm today</span>
+              <span className="announce-item">🚚 Order before <strong>9 am</strong> — arrive by 9 pm today</span>
               <span className="announce-dot" />
               <span className="announce-item">✨ Free delivery on orders over <strong>£30</strong></span>
               <span className="announce-dot" />
