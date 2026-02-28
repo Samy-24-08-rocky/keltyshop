@@ -38,9 +38,14 @@ export const seedCollectionIfEmpty = async (collectionName, items) => {
     // Check the permanent seeded flag first
     const settingsRef = doc(db, 'settings', 'main');
     const settingsSnap = await getDoc(settingsRef);
-    const seededFlags = settingsSnap.exists() ? (settingsSnap.data()._seeded || {}) : {};
-
-    if (seededFlags[collectionName]) return false; // already seeded — never re-seed
+    if (settingsSnap.exists()) {
+        const seededData = settingsSnap.data()._seeded;
+        // Accept: _seeded: true  (boolean — skip ALL collections)
+        // Accept: _seeded: { orders: true } (map — skip specific collection)
+        const isSeeded = seededData === true ||
+            (seededData && typeof seededData === 'object' && seededData[collectionName] === true);
+        if (isSeeded) return false; // already seeded — never re-seed
+    }
 
     // Also skip if collection already has documents (first-time safety check)
     const snap = await getDocs(col(collectionName));
