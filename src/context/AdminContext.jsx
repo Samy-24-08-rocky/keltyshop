@@ -218,27 +218,29 @@ export const AdminProvider = ({ children }) => {
         } catch (err) { console.error('updateOrder failed:', err); }
     }, [orders]);
 
-    // Soft delete — marks as deleted, keeps in Firestore (recoverable)
+    // Soft delete — marks _deleted:true in Firestore (recoverable from Trash)
     const softDeleteOrder = useCallback(async (id) => {
         const target = orders.find(o => o.id === id);
         if (!target) return;
+        const firestoreDocId = target._docId || target.id;
         const patch = { _deleted: true, _deletedAt: new Date().toISOString() };
         // Optimistic update
         setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
         try {
-            if (target._docId) await updateOrderFS(target._docId, patch);
+            await updateOrderFS(firestoreDocId, patch);
         } catch (err) { console.error('softDeleteOrder failed:', err); }
     }, [orders]);
 
-    // Restore a soft-deleted order
+    // Restore a soft-deleted order back to active list
     const restoreOrder = useCallback(async (id) => {
         const target = orders.find(o => o.id === id);
         if (!target) return;
+        const firestoreDocId = target._docId || target.id;
         const patch = { _deleted: false, _deletedAt: null };
         // Optimistic update
         setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
         try {
-            if (target._docId) await updateOrderFS(target._docId, patch);
+            await updateOrderFS(firestoreDocId, patch);
         } catch (err) { console.error('restoreOrder failed:', err); }
     }, [orders]);
 
