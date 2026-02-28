@@ -77,7 +77,7 @@ export default function AdminStock() {
     return (
         <div>
             {/* ── KPI summary cards ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 {[
                     { label: 'Total Products', value: summary.total, color: '#6366f1', bg: 'rgba(99,102,241,0.12)', icon: FiPackage, filter: 'all' },
                     { label: 'Out of Stock', value: summary.out, color: '#ef4444', bg: 'rgba(239,68,68,0.12)', icon: FiXCircle, filter: 'out' },
@@ -121,6 +121,32 @@ export default function AdminStock() {
                 }
             `}</style>
 
+            <style>{`
+                /* ── Stock table → mobile cards ── */
+                .sk-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr; gap:1rem; padding: 0.75rem 1.25rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.06); }
+                .sk-row    { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr; gap:1rem; padding: 0.875rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: center; transition: background .2s; }
+                .sk-label  { font-size: 0.68rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.06em; }
+                @media (max-width: 640px) {
+                    .sk-header { display: none; }
+                    .sk-row {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                        padding: 0.875rem 1rem;
+                    }
+                    .sk-row-top { display: flex; align-items: center; gap: 0.75rem; }
+                    .sk-row-meta { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+                    .sk-row-bottom { display: flex; align-items: center; gap: 0.625rem; }
+                    .sk-col-cat, .sk-col-status-desktop, .sk-col-bar-desktop, .sk-col-update-desktop { display: none; }
+                    .sk-mobile-only { display: flex !important; }
+                }
+                @media (min-width: 641px) {
+                    .sk-row-top, .sk-row-meta, .sk-row-bottom { display: contents; }
+                    .sk-mobile-only { display: none !important; }
+                    .sk-col-cat, .sk-col-status-desktop, .sk-col-bar-desktop, .sk-col-update-desktop { display: block; }
+                }
+            `}</style>
+
             {/* ── Alert banner if out of stock items exist ── */}
             {summary.out > 0 && (
                 <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: '0.875rem 1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -157,9 +183,9 @@ export default function AdminStock() {
             {/* ── Stock Table ── */}
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, overflow: 'hidden' }}>
                 {/* Table header */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.5fr 1fr', gap: '1rem', padding: '0.75rem 1.25rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="sk-header">
                     {['Product', 'Category', 'Status', 'Stock Level', 'Update'].map(h => (
-                        <div key={h} style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</div>
+                        <div key={h} className="sk-label">{h}</div>
                     ))}
                 </div>
 
@@ -176,44 +202,71 @@ export default function AdminStock() {
                         const isEditing = editId === p.id;
 
                         return (
-                            <div key={p.id} style={{
-                                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.5fr 1fr',
-                                gap: '1rem', padding: '0.875rem 1.25rem',
-                                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                            <div key={p.id} className="sk-row" style={{
                                 background: p.stock === 0 ? 'rgba(239,68,68,0.04)' : p.stock <= 5 ? 'rgba(245,158,11,0.03)' : 'transparent',
-                                alignItems: 'center',
-                                transition: 'background .2s',
                             }}>
-                                {/* Product */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-                                    {p.image ? (
-                                        <img src={p.image} alt={p.name} style={{ width: 38, height: 38, borderRadius: 9, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }} />
-                                    ) : (
-                                        <div style={{ width: 38, height: 38, borderRadius: 9, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                            <FiPackage size={15} color="#475569" />
+                                {/* Product — always visible */}
+                                <div className="sk-row-top">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0, flex: 1 }}>
+                                        {p.image ? (
+                                            <img src={p.image} alt={p.name} style={{ width: 38, height: 38, borderRadius: 9, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }} />
+                                        ) : (
+                                            <div style={{ width: 38, height: 38, borderRadius: 9, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <FiPackage size={15} color="#475569" />
+                                            </div>
+                                        )}
+                                        <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#475569' }}>£{Number(p.price).toFixed(2)}</div>
                                         </div>
-                                    )}
-                                    <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                                        <div style={{ fontSize: '0.7rem', color: '#475569' }}>£{Number(p.price).toFixed(2)}</div>
+                                    </div>
+                                    {/* Mobile-only: status + update in top row */}
+                                    <div className="sk-mobile-only" style={{ alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: ss.bg, color: ss.color, border: `1px solid ${ss.border}`, padding: '3px 8px', borderRadius: 99, fontSize: '0.68rem', fontWeight: 700 }}>
+                                            <Icon size={10} /> {ss.label}
+                                        </span>
                                     </div>
                                 </div>
 
-                                {/* Category */}
-                                <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{p.category}</div>
+                                {/* Mobile meta row: bar + update */}
+                                <div className="sk-row-meta">
+                                    <div className="sk-mobile-only" style={{ flex: 1, alignItems: 'center', gap: '0.5rem' }}>
+                                        <StockBar stock={p.stock} max={maxStock} />
+                                        <div onClick={e => e.stopPropagation()}>
+                                            {isEditing ? (
+                                                <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+                                                    <input
+                                                        type="number" min="0"
+                                                        value={newStock}
+                                                        onChange={e => setNewStock(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && handleUpdateStock(p.id)}
+                                                        autoFocus placeholder="qty"
+                                                        style={{ ...inputSx, width: 60, padding: '0.4rem 0.5rem', fontSize: '0.8rem' }}
+                                                    />
+                                                    <button onClick={() => handleUpdateStock(p.id)} style={{ background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', borderRadius: 7, padding: '0.4rem 0.5rem', cursor: 'pointer' }}><FiCheckCircle size={13} /></button>
+                                                    <button onClick={() => { setEditId(null); setNewStock(''); }} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', borderRadius: 7, padding: '0.4rem 0.5rem', cursor: 'pointer' }}><FiXCircle size={13} /></button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => { setEditId(p.id); setNewStock(String(p.stock)); }}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)', color: '#93c5fd', borderRadius: 8, padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, WebkitTapHighlightColor: 'transparent', minHeight: 36 }}
+                                                >
+                                                    <FiEdit2 size={11} /> Update
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
-                                {/* Status badge */}
-                                <div>
+                                {/* Desktop-only columns */}
+                                <div className="sk-col-cat" style={{ fontSize: '0.78rem', color: '#64748b' }}>{p.category}</div>
+                                <div className="sk-col-status-desktop">
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: ss.bg, color: ss.color, border: `1px solid ${ss.border}`, padding: '3px 8px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 700 }}>
                                         <Icon size={11} /> {ss.label}
                                     </span>
                                 </div>
-
-                                {/* Stock bar */}
-                                <StockBar stock={p.stock} max={maxStock} />
-
-                                {/* Quick update */}
-                                <div onClick={e => e.stopPropagation()}>
+                                <div className="sk-col-bar-desktop"><StockBar stock={p.stock} max={maxStock} /></div>
+                                <div className="sk-col-update-desktop" onClick={e => e.stopPropagation()}>
                                     {isEditing ? (
                                         <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
                                             <input
@@ -221,16 +274,11 @@ export default function AdminStock() {
                                                 value={newStock}
                                                 onChange={e => setNewStock(e.target.value)}
                                                 onKeyDown={e => e.key === 'Enter' && handleUpdateStock(p.id)}
-                                                autoFocus
-                                                placeholder="qty"
+                                                autoFocus placeholder="qty"
                                                 style={{ ...inputSx, width: 60, padding: '0.4rem 0.5rem', fontSize: '0.8rem' }}
                                             />
-                                            <button onClick={() => handleUpdateStock(p.id)} style={{ background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', borderRadius: 7, padding: '0.4rem 0.5rem', cursor: 'pointer' }}>
-                                                <FiCheckCircle size={13} />
-                                            </button>
-                                            <button onClick={() => { setEditId(null); setNewStock(''); }} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', borderRadius: 7, padding: '0.4rem 0.5rem', cursor: 'pointer' }}>
-                                                <FiXCircle size={13} />
-                                            </button>
+                                            <button onClick={() => handleUpdateStock(p.id)} style={{ background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', borderRadius: 7, padding: '0.4rem 0.5rem', cursor: 'pointer' }}><FiCheckCircle size={13} /></button>
+                                            <button onClick={() => { setEditId(null); setNewStock(''); }} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', borderRadius: 7, padding: '0.4rem 0.5rem', cursor: 'pointer' }}><FiXCircle size={13} /></button>
                                         </div>
                                     ) : (
                                         <button
