@@ -30,18 +30,42 @@ const fetchAll = async (collectionName) => {
     return snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
 };
 
-/** Seed a collection with an array of objects (only if the collection is empty) */
+/**
+ * Seed a collection ONCE — uses a permanent flag in settings/main
+ * so deleted items are never re-seeded on page refresh.
+ */
 export const seedCollectionIfEmpty = async (collectionName, items) => {
+    // Check the permanent seeded flag first
+    const settingsRef = doc(db, 'settings', 'main');
+    const settingsSnap = await getDoc(settingsRef);
+    const seededFlags = settingsSnap.exists() ? (settingsSnap.data()._seeded || {}) : {};
+
+    if (seededFlags[collectionName]) return false; // already seeded — never re-seed
+
+    // Also skip if collection already has documents (first-time safety check)
     const snap = await getDocs(col(collectionName));
-    if (!snap.empty) return false; // already seeded
+    if (!snap.empty) {
+        // Mark as seeded so we don't check again
+        await updateDoc(settingsRef, { [`_seeded.${collectionName}`]: true }).catch(() => { });
+        return false;
+    }
 
     const batch = writeBatch(db);
     items.forEach(item => {
-        // Use item.id as the Firestore document ID so queries by id still work
         const ref = doc(db, collectionName, String(item.id ?? item.name ?? Math.random()));
         batch.set(ref, { ...item, _seeded: true, createdAt: serverTimestamp() });
     });
     await batch.commit();
+
+    // Mark this collection as permanently seeded
+    try {
+        if (settingsSnap.exists()) {
+            await updateDoc(settingsRef, { [`_seeded.${collectionName}`]: true });
+        } else {
+            await setDoc(settingsRef, { _seeded: { [collectionName]: true } }, { merge: true });
+        }
+    } catch (e) { console.warn('Could not write seed flag:', e); }
+
     return true;
 };
 
