@@ -143,7 +143,7 @@ export default function AdminSettings() {
                     >
                         <option value="" style={{ background: '#0f172a', color: '#94a3b8' }}>— Choose a product —</option>
                         {[...products]
-                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                             .map(p => (
                                 <option key={p.id} value={p.id} style={{ background: '#0f172a', color: p.stock === 0 ? '#ef4444' : '#f1f5f9' }}>
                                     {p.name} — £{Number(p.price).toFixed(2)}{p.stock === 0 ? ' (OUT OF STOCK)' : ''}

@@ -401,7 +401,7 @@ function WalkinPanel({ session, setSession, showAlert, settings, products, updat
         return (
             products.find(p => p.barcode && p.barcode.toLowerCase() === ql) ||
             products.find(p => String(p.id) === ql) ||
-            products.find(p => p.name.toLowerCase().startsWith(ql))
+            products.find(p => (p.name || '').toLowerCase().startsWith(ql))
         );
     }, [products]);
 
@@ -476,9 +476,9 @@ function WalkinPanel({ session, setSession, showAlert, settings, products, updat
 
     const filtered = searchQuery
         ? products.filter(p =>
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             (p.barcode && p.barcode.includes(searchQuery)) ||
-            (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
+            ((p.category || '').toLowerCase().includes(searchQuery.toLowerCase()))
         )
         : products;
 
