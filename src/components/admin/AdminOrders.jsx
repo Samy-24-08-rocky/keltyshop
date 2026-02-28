@@ -274,8 +274,8 @@ export default function AdminOrders() {
                                         <button onClick={() => openEdit(o)} title="Edit" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
                                             <FiEdit2 size={13} />
                                         </button>
-                                        {/* Move to trash */}
-                                        <button onClick={() => setConfirm({ id: o.id, step: 'soft' })} title="Move to Trash" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
+                                        {/* Permanent delete — direct with confirmation */}
+                                        <button onClick={() => setConfirm({ id: o.id, step: 'permanent' })} title="Delete Order" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
                                             <FiTrash2 size={13} />
                                         </button>
                                     </div>
