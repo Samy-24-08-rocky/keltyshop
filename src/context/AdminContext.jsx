@@ -108,7 +108,10 @@ export const AdminProvider = ({ children }) => {
 
     // ── Admin auth ───────────────────────────────────────────────────────────────
     const adminLogin = useCallback((email, password) => {
-        if (email.trim().toLowerCase() === 'admin@kelty.com' && password === 'admin123') {
+        const expectedEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@kelty.com';
+        const expectedPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+
+        if (email.trim().toLowerCase() === expectedEmail && password === expectedPassword) {
             const user = { email: email.trim().toLowerCase(), name: 'Admin', role: 'superadmin' };
             setAdminUser(user);
             localStorage.setItem('admin_user_v3', JSON.stringify(user));
