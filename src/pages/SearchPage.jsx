@@ -24,8 +24,8 @@ export default function SearchPage({ addToCart }) {
         if (!query.trim()) return [];
         const q = query.toLowerCase();
         return products.filter(p =>
-            p.name.toLowerCase().includes(q) ||
-            p.category.toLowerCase().includes(q) ||
+            (p.name || '').toLowerCase().includes(q) ||
+            (p.category || '').toLowerCase().includes(q) ||
             (p.description || '').toLowerCase().includes(q)
         );
     }, [products, query]);

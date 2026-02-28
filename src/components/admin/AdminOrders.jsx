@@ -72,7 +72,7 @@ export default function AdminOrders() {
 
     const filtered = activeOrders.filter(o => {
         const matchFilter = filter === 'all' || o.status === filter;
-        const matchSearch = o.id.toLowerCase().includes(search.toLowerCase())
+        const matchSearch = (o.id || '').toLowerCase().includes(search.toLowerCase())
             || (o.customer || '').toLowerCase().includes(search.toLowerCase())
             || (o.email || '').toLowerCase().includes(search.toLowerCase());
         return matchFilter && matchSearch;

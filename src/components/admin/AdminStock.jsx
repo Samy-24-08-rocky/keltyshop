@@ -42,8 +42,8 @@ export default function AdminStock() {
 
     const filtered = useMemo(() => {
         return products.filter(p => {
-            const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-                p.category.toLowerCase().includes(search.toLowerCase());
+            const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+                (p.category || '').toLowerCase().includes(search.toLowerCase());
             const s = p.stock;
             const matchFilter =
                 filter === 'all' ? true :
