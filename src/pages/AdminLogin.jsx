@@ -22,7 +22,7 @@ const AdminLogin = () => {
         if (ok) {
             navigate('/admin');
         } else {
-            setError('Invalid credentials. Use admin@kelty.com / admin123');
+            setError('Invalid email or password. Please try again.');
         }
     };
 
@@ -114,7 +114,7 @@ const AdminLogin = () => {
                                     type="email"
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
-                                    placeholder="admin@kelty.com"
+                                    placeholder="Enter your email"
                                     required
                                     style={{
                                         width: '100%', boxSizing: 'border-box',
