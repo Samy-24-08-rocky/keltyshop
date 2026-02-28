@@ -242,12 +242,46 @@ export default function AdminSettings() {
             {/* ── Tax & Finance ── */}
             <Section title="💰 Tax & Finance">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <Field label="Tax Rate (%)" hint="Applied to all orders">
-                        <TextInput type="number" step="0.1" min="0" max="100" value={local.taxRate} onChange={e => set('taxRate', parseFloat(e.target.value) || 0)} />
+                    <Field label="VAT / Tax Rate (%)" hint="Set to 0 to disable tax completely">
+                        <div style={{ position: 'relative' }}>
+                            <TextInput
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                value={local.taxRate}
+                                onChange={e => set('taxRate', parseFloat(e.target.value) || 0)}
+                                style={{ ...inp, paddingRight: '3.5rem' }}
+                            />
+                            <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 700, fontSize: '0.85rem', pointerEvents: 'none' }}>%</span>
+                        </div>
+                        <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {[0, 5, 10, 15, 20].map(r => (
+                                <button
+                                    key={r}
+                                    onClick={() => set('taxRate', r)}
+                                    style={{
+                                        padding: '0.25rem 0.65rem', borderRadius: 6, border: '1px solid',
+                                        borderColor: local.taxRate === r ? '#10b981' : 'rgba(255,255,255,0.12)',
+                                        background: local.taxRate === r ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+                                        color: local.taxRate === r ? '#10b981' : '#64748b',
+                                        fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                                    }}
+                                >
+                                    {r === 0 ? 'No Tax' : `${r}%`}
+                                </button>
+                            ))}
+                        </div>
                     </Field>
                     <Field label="Featured Products Count" hint="Products shown in homepage featured section">
                         <TextInput type="number" min="1" max="20" value={local.featuredProductsCount} onChange={e => set('featuredProductsCount', parseInt(e.target.value) || 8)} />
                     </Field>
+                </div>
+                <div style={{ marginTop: '0.5rem', background: local.taxRate === 0 ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${local.taxRate === 0 ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}`, borderRadius: 10, padding: '0.65rem 1rem', fontSize: '0.78rem', color: local.taxRate === 0 ? '#10b981' : '#f59e0b' }}>
+                    {local.taxRate === 0
+                        ? '✅ Tax is disabled — no VAT will be charged on any order'
+                        : `📋 Currently charging ${local.taxRate}% VAT on all orders. On a £10.00 order that's £${(10 * local.taxRate / 100).toFixed(2)} tax → £${(10 + 10 * local.taxRate / 100).toFixed(2)} total.`
+                    }
                 </div>
             </Section>
 
