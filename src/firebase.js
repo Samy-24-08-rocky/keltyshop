@@ -50,6 +50,8 @@ if (isFirebaseConfigured) {
 
 // Re-export Firebase Auth helpers and the configuration flag
 export {
+    auth,
+    googleProvider,
     isFirebaseConfigured,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
