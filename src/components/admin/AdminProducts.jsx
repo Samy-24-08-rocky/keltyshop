@@ -153,6 +153,7 @@ export default function AdminProducts() {
                 {/* View Switch */}
                 <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '3px' }}>
                     <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 0.875rem', border: 'none', borderRadius: 8, background: viewMode === 'list' ? '#334155' : 'transparent', color: viewMode === 'list' ? '#fff' : '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>List</button>
+                    <button onClick={() => setViewMode('grid')} style={{ padding: '0.5rem 0.875rem', border: 'none', borderRadius: 8, background: viewMode === 'grid' ? '#334155' : 'transparent', color: viewMode === 'grid' ? '#fff' : '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>Grid</button>
                     <button onClick={() => setViewMode('grouped')} style={{ padding: '0.5rem 0.875rem', border: 'none', borderRadius: 8, background: viewMode === 'grouped' ? '#334155' : 'transparent', color: viewMode === 'grouped' ? '#fff' : '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>Grouped</button>
                 </div>
                 {/* Actions */}
@@ -259,13 +260,56 @@ export default function AdminProducts() {
                 @media (min-width: 641px) {
                     .ap-prod-table { display: table; width: 100%; border-collapse: collapse; }
                     .ap-prod-cards { display: none; }
+                    .ap-grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+                    .ap-grid-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); borderRadius: 16px; overflow: hidden; position: relative; transition: all 0.3s ease; }
+                    .ap-grid-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.06); border-color: rgba(99,102,241,0.3); box-shadow: 0 12px 24px rgba(0,0,0,0.2); }
+                    .ap-grid-image { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.05); }
+                    .ap-grid-content { padding: 0.875rem; }
+                    .ap-grid-title { font-weight: 700; color: #f1f5f9; font-size: 0.85rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    .ap-grid-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
+                    .ap-grid-price { font-weight: 800; color: #fff; font-size: 1rem; }
+                    .ap-grid-stock { font-size: 0.75rem; font-weight: 600; }
+                    .ap-grid-actions { position: absolute; top: 0.5rem; right: 0.5rem; display: flex; gap: 0.375rem; opacity: 0; transition: opacity 0.2s; }
+                    .ap-grid-card:hover .ap-grid-actions { opacity: 1; }
                 }
             `}</style>
 
             <div className="ap-prod-table-wrap">
 
+                {/* ── Grid View ── */}
+                {viewMode === 'grid' && (
+                    <div className="ap-grid-container">
+                        {filtered.map(p => (
+                            <div key={p.id} className="ap-grid-card" style={{ opacity: p.stock === 0 ? 0.7 : 1 }}>
+                                <div className="ap-grid-actions">
+                                    <button onClick={() => toggleFeatured(p.id)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: 'none', borderRadius: 8, padding: '0.4rem', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#fff' }}>
+                                        <FiStar size={14} fill={p.featured ? '#fbbf24' : 'none'} />
+                                    </button>
+                                    <button onClick={() => openEdit(p)} style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: 'none', borderRadius: 8, padding: '0.4rem', cursor: 'pointer', color: '#60a5fa' }}><FiEdit2 size={14} /></button>
+                                    <button onClick={() => setConfirm(p.id)} style={{ background: 'rgba(239,68,68,0.8)', border: 'none', borderRadius: 8, padding: '0.4rem', cursor: 'pointer', color: '#fff' }}><FiTrash2 size={14} /></button>
+                                </div>
+                                <img src={p.image} alt={p.name} className="ap-grid-image" />
+                                <div className="ap-grid-content">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>{p.category}</span>
+                                        <MerchBadge slot={p.merchandisingSlot} />
+                                    </div>
+                                    <div className="ap-grid-title" title={p.name}>{p.name}</div>
+                                    <div className="ap-grid-meta">
+                                        <div className="ap-grid-price">£{p.price.toFixed(2)}</div>
+                                        <div className="ap-grid-stock" style={{ color: stockColor(p.stock) }}>{p.stock} in stock</div>
+                                    </div>
+                                </div>
+                                <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem' }}>
+                                    <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} style={{ cursor: 'pointer', width: 18, height: 18 }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {/* ── Desktop Table ── */}
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', display: viewMode === 'grid' ? 'none' : 'block' }}>
                     <table className="ap-prod-table">
                         <thead>
                             <tr className="ap-prod-thead">
