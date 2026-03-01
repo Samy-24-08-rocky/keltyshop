@@ -60,11 +60,11 @@ export default function AdminProducts() {
         setUploading(true);
         const data = new FormData();
         data.append('file', file);
-        data.append('upload_preset', 'ml_default'); // Default preset for demo; works with most public Cloudinary accounts
+        data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
 
         try {
-            // Using Cloudinary's free unsigned upload API
-            const res = await fetch(`https://api.cloudinary.com/v1_1/demo/image/upload`, {
+            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'demo';
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
                 method: 'POST',
                 body: data
             });
