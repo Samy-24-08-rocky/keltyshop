@@ -42,8 +42,10 @@ export default function LoginPage() {
       'auth/invalid-email': 'Please enter a valid email address.',
       'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
       'auth/network-request-failed': 'Network error. Check your connection.',
+      'auth/unauthorized-domain': 'This domain is not authorized for Google Sign-in. Please add it in your Firebase Console.',
+      'auth/operation-not-allowed': 'Google Sign-in is not enabled in your Firebase Project.',
     };
-    return map[code] || 'Something went wrong. Please try again.';
+    return map[code] || `Error: ${code || 'Something went wrong. Please try again.'}`;
   };
 
   const handleEmailLogin = async (e) => {

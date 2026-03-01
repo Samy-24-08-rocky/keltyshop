@@ -65,8 +65,10 @@ export default function RegisterPage() {
       'auth/weak-password': 'Password must be at least 6 characters.',
       'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
       'auth/network-request-failed': 'Network error. Check your connection.',
+      'auth/unauthorized-domain': 'This domain is not authorized for Google Sign-in. Please add it in your Firebase Console.',
+      'auth/operation-not-allowed': 'Google Sign-in is not enabled in your Firebase Project.',
     };
-    return map[code] || 'Registration failed. Please try again.';
+    return map[code] || `Error: ${code || 'Registration failed. Please try again.'}`;
   };
 
   const handleSubmit = async (e) => {
