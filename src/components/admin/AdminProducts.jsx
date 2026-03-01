@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../context/AdminContext';
-import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap, FiFilter } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap, FiFilter, FiXCircle, FiTag, FiAlertCircle, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import BarcodeScanner from './BarcodeScanner';
 
 const CATEGORIES = ['Pantry', 'Condiments', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Drinks', 'Snacks'];
@@ -10,6 +10,15 @@ const blank = {
     image: '', rating: '4.5', featured: false, barcode: '',
     merchandisingSlot: 'none' // 'none', 'golden', 'hotspot', 'impulse'
 };
+
+const FILTER_TYPES = [
+    { id: 'all', label: 'All', icon: null },
+    { id: 'out', label: 'Out of Stock', icon: 'FiXCircle', color: '#ef4444' },
+    { id: 'low', label: 'Low Stock', icon: 'FiAlertTriangle', color: '#f59e0b' },
+    { id: 'onSale', label: 'On Sale', icon: 'FiTag', color: '#10b981' },
+    { id: 'featured', label: 'Featured', icon: 'FiStar', color: '#facc15' },
+    { id: 'merch', label: 'Merchandising', icon: 'FiZap', color: '#6366f1' },
+];
 
 const Input = ({ label, ...props }) => (
     <div style={{ marginBottom: '1rem' }}>
@@ -36,6 +45,11 @@ export default function AdminProducts() {
     const [confirm, setConfirm] = useState(null);
     const [showScanner, setShowScanner] = useState(false);
     const [viewMode, setViewMode] = useState('grouped'); // 'list' | 'grouped'
+    const [activeFilter, setActiveFilter] = useState('all');
+    const [selectedCat, setSelectedCat] = useState('All Categories');
+    const [collapsed, setCollapsed] = useState([]);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, val: '' });
 
     const handleScannedProduct = (scannedData) => {
         setForm({ ...blank, ...scannedData, price: '', oldPrice: '', stock: '' });
@@ -43,10 +57,21 @@ export default function AdminProducts() {
         setModal('edit');
     };
 
-    const filtered = products.filter(p =>
-        (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (p.category || '').toLowerCase().includes(search.toLowerCase())
-    ).sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+    const filtered = useMemo(() => {
+        let res = products.filter(p =>
+            (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (p.category || '').toLowerCase().includes(search.toLowerCase())
+        );
+
+        if (selectedCat !== 'All Categories') res = res.filter(p => p.category === selectedCat);
+        if (activeFilter === 'out') res = res.filter(p => p.stock === 0);
+        else if (activeFilter === 'low') res = res.filter(p => p.stock > 0 && p.stock <= 5);
+        else if (activeFilter === 'onSale') res = res.filter(p => p.oldPrice && p.oldPrice > p.price);
+        else if (activeFilter === 'featured') res = res.filter(p => p.featured);
+        else if (activeFilter === 'merch') res = res.filter(p => p.merchandisingSlot && p.merchandisingSlot !== 'none');
+
+        return res.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+    }, [products, search, activeFilter, selectedCat]);
 
     const grouped = filtered.reduce((acc, p) => {
         if (!acc[p.category]) acc[p.category] = [];
@@ -84,25 +109,124 @@ export default function AdminProducts() {
     const stockColor = (s) => s === 0 ? '#ef4444' : s <= 5 ? '#f59e0b' : '#22c55e';
     const stockLabel = (s) => s === 0 ? 'Out of Stock' : s <= 5 ? `Low (${s})` : `${s}`;
 
+    const handleBulkMove = (newCat) => {
+        if (!newCat) return;
+        selectedIds.forEach(id => updateProduct(id, { category: newCat }));
+        setSelectedIds([]);
+    };
+
+    const toggleCollapse = (cat) => setCollapsed(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+
+    const handleBulkDelete = () => {
+        if (!window.confirm(`Delete ${selectedIds.length} items?`)) return;
+        selectedIds.forEach(id => deleteProduct(id));
+        setSelectedIds([]);
+    };
+
+    const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    const selectAll = () => setSelectedIds(selectedIds.length === filtered.length ? [] : filtered.map(p => p.id));
+
+    const handleInlineUpdate = (id, field) => {
+        const val = field === 'stock' ? parseInt(inlineEdit.val) : parseFloat(inlineEdit.val);
+        if (isNaN(val)) return setInlineEdit({ id: null, field: null, val: '' });
+        updateProduct(id, { [field]: val });
+        setInlineEdit({ id: null, field: null, val: '' });
+    };
+
+    const MerchBadge = ({ slot }) => {
+        const config = {
+            golden: { label: 'GOLDEN', bg: '#fbbf24', color: '#000' },
+            hotspot: { label: 'HOTSPOT', bg: '#ef4444', color: '#fff' },
+            impulse: { label: 'IMPULSE', bg: '#6366f1', color: '#fff' }
+        }[slot];
+        if (!config) return null;
+        return <span style={{ fontSize: '0.6rem', fontWeight: 900, background: config.bg, color: config.color, padding: '1px 5px', borderRadius: 4, letterSpacing: '0.02em' }}>{config.label}</span>;
+    };
+
     return (
         <div>
-            {/* Toolbar */}
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
                     <FiSearch size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#475569' }} />
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products…" style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '0.65rem 0.875rem 0.65rem 2.25rem', color: '#f1f5f9', fontSize: '0.875rem', outline: 'none' }} />
                 </div>
-                {/* Scan Barcode */}
-                <button onClick={() => setShowScanner(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(99,102,241,0.35)', flexShrink: 0 }}>
-                    <FiZap size={16} /> Scan Barcode
+                {/* View Switch */}
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '3px' }}>
+                    <button onClick={() => setViewMode('list')} style={{ padding: '0.5rem 0.875rem', border: 'none', borderRadius: 8, background: viewMode === 'list' ? '#334155' : 'transparent', color: viewMode === 'list' ? '#fff' : '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>List</button>
+                    <button onClick={() => setViewMode('grouped')} style={{ padding: '0.5rem 0.875rem', border: 'none', borderRadius: 8, background: viewMode === 'grouped' ? '#334155' : 'transparent', color: viewMode === 'grouped' ? '#fff' : '#64748b', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}>Grouped</button>
+                </div>
+                {/* Actions */}
+                <button onClick={() => setShowScanner(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem' }}>
+                    <FiZap size={16} /> Scan
                 </button>
-                <button onClick={() => setViewMode(v => v === 'list' ? 'grouped' : 'list')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', background: viewMode === 'grouped' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)', color: viewMode === 'grouped' ? '#10b981' : '#94a3b8', border: `1px solid ${viewMode === 'grouped' ? '#10b981' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', flexShrink: 0 }}>
-                    <FiFilter size={16} /> {viewMode === 'grouped' ? 'Showing Groups' : 'Plain List'}
-                </button>
-                <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(239,68,68,0.35)', flexShrink: 0 }}>
+                <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(239,68,68,0.35)' }}>
                     <FiPlus size={16} /> Add Product
                 </button>
             </div>
+
+            {/* Filter Ribbon */}
+            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', marginBottom: '1.25rem', scrollbarWidth: 'none' }}>
+                {FILTER_TYPES.map(f => (
+                    <button
+                        key={f.id}
+                        onClick={() => setActiveFilter(f.id)}
+                        style={{
+                            padding: '0.4rem 0.875rem', borderRadius: 8, border: `1px solid ${activeFilter === f.id ? f.color || '#3b82f6' : 'rgba(255,255,255,0.08)'}`,
+                            background: activeFilter === f.id ? `${f.color ? f.color + '15' : 'rgba(59,130,246,0.1)'}` : 'rgba(255,255,255,0.03)',
+                            color: activeFilter === f.id ? f.color || '#60a5fa' : '#64748b',
+                            fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s'
+                        }}
+                    >
+                        {f.label}
+                    </button>
+                ))}
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#475569', fontSize: '0.7rem', fontWeight: 600 }}>
+                    {filtered.length} / {products.length} Products
+                </div>
+            </div>
+
+            {/* Bulk Actions Bar */}
+            {selectedIds.length > 0 && (
+                <div style={{ background: '#1e2a3a', border: '1px solid #3b82f6', borderRadius: 12, padding: '0.875rem 1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', animation: 'slideDown 0.3s', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                    <div style={{ color: '#93c5fd', fontSize: '0.85rem', fontWeight: 600 }}>{selectedIds.length} items selected — <span style={{ color: '#64748b' }}>Quick manage category or delete</span></div>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <select
+                            onChange={(e) => handleBulkMove(e.target.value)}
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#f1f5f9', padding: '0.4rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', outline: 'none' }}
+                        >
+                            <option value="">Move to Category...</option>
+                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <button onClick={handleBulkDelete} style={{ background: '#ef444415', color: '#fca5a5', border: '1px solid #ef444430', padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Delete All</button>
+                        <button onClick={() => setSelectedIds([])} style={{ background: 'transparent', border: 'none', color: '#475569', fontSize: '0.75rem', cursor: 'pointer' }}><FiX size={18} /></button>
+                    </div>
+                </div>
+            )}
+
+            {/* Category Navigation Bar */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', overflowX: 'auto', paddingBottom: '0.5rem', scrollbarWidth: 'none' }}>
+                <button
+                    onClick={() => setSelectedCat('All Categories')}
+                    style={{ padding: '0.5rem 1rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', background: selectedCat === 'All Categories' ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)', color: selectedCat === 'All Categories' ? '#a5b4fc' : '#64748b', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                    All Categories
+                </button>
+                {CATEGORIES.map(cat => {
+                    const count = products.filter(p => p.category === cat).length;
+                    const oos = products.filter(p => p.category === cat && p.stock === 0).length;
+                    return (
+                        <button
+                            key={cat}
+                            onClick={() => setSelectedCat(cat)}
+                            style={{ position: 'relative', padding: '0.5rem 1rem', borderRadius: 10, border: `1px solid ${selectedCat === cat ? '#3b82f640' : 'rgba(255,255,255,0.08)'}`, background: selectedCat === cat ? '#3b82f615' : 'rgba(255,255,255,0.03)', color: selectedCat === cat ? '#60a5fa' : '#64748b', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                            {cat} <span style={{ opacity: 0.5, marginLeft: '0.25rem' }}>({count})</span>
+                            {oos > 0 && <span style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '2px solid #1e2a3a' }} />}
+                        </button>
+                    );
+                })}
+            </div>
+
 
             {/* Responsive Product List */}
             <style>{`
@@ -145,99 +269,137 @@ export default function AdminProducts() {
                     <table className="ap-prod-table">
                         <thead>
                             <tr className="ap-prod-thead">
-                                {['Product', 'Category', 'Price', 'Stock', 'Featured', 'Actions'].map(h => (
+                                <th style={{ width: 40 }}><input type="checkbox" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={selectAll} style={{ cursor: 'pointer' }} /></th>
+                                {['Product', 'Category', 'Price', 'Stock', 'Promo', 'Actions'].map(h => (
                                     <th key={h}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {viewMode === 'grouped'
-                                ? Object.entries(grouped).map(([cat, items]) => (
-                                    <React.Fragment key={cat}>
-                                        <tr style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                            <td colSpan="6" style={{ padding: '0.5rem 1rem', fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                📦 {cat} ({items.length})
-                                            </td>
-                                        </tr>
-                                        {items.map(p => (
-                                            <tr key={p.id} className="ap-prod-row">
-                                                {/* (Row content exactly same as before) */}
-                                                <td>
+                                ? Object.entries(grouped).map(([cat, items]) => {
+                                    const isCollapsed = collapsed.includes(cat);
+                                    const oosCount = items.filter(i => i.stock === 0).length;
+                                    return (
+                                        <React.Fragment key={cat}>
+                                            <tr
+                                                onClick={() => toggleCollapse(cat)}
+                                                style={{ background: 'rgba(255,255,255,0.05)', cursor: 'pointer', borderLeft: oosCount > 0 ? '4px solid #ef4444' : 'none' }}
+                                            >
+                                                <td colSpan="7" style={{ padding: '0.75rem 1rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                        <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
-                                                        <div>
-                                                            <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{p.name}</div>
-                                                            <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}{p.barcode ? ` · 🔳 ${p.barcode}` : ''}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td><span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span></td>
-                                                <td>
-                                                    <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
-                                                    {p.oldPrice && <div style={{ color: '#475569', fontSize: '0.75rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
-                                                </td>
-                                                <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
-                                                <td>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                        <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
-                                                            <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
-                                                        </button>
-                                                        {p.merchandisingSlot && p.merchandisingSlot !== 'none' && (
-                                                            <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
-                                                                {p.merchandisingSlot[0]}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
-                                                        <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                                                        {isCollapsed ? <FiChevronDown size={14} color="#64748b" /> : <FiChevronUp size={14} color="#64748b" />}
+                                                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f1f5f9', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                                            📦 {cat} <span style={{ opacity: 0.5, fontWeight: 500, marginLeft: '0.4rem' }}>({items.length} items)</span>
+                                                        </span>
+                                                        {oosCount > 0 && <span style={{ background: '#ef444415', color: '#fca5a5', padding: '2px 8px', borderRadius: 6, fontSize: '0.65rem', fontWeight: 800 }}>{oosCount} OUT OF STOCK</span>}
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
-                                    </React.Fragment>
-                                ))
+                                            {!isCollapsed && items.map(p => (
+                                                <tr key={p.id} className="ap-prod-row" style={{ opacity: p.stock === 0 ? 0.7 : 1, background: selectedIds.includes(p.id) ? 'rgba(99,102,241,0.05)' : 'transparent' }}>
+                                                    <td><input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} style={{ cursor: 'pointer' }} /></td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                            <img src={p.image} alt={p.name} style={{ width: 42, height: 42, borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                            <div style={{ minWidth: 0 }}>
+                                                                <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                                                <div style={{ color: '#475569', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                                    #{p.id}{p.barcode && <><span style={{ opacity: 0.3 }}>|</span> <FiZap size={10} /> {p.barcode}</>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td><span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{p.category}</span></td>
+                                                    <td>
+                                                        {inlineEdit.id === p.id && inlineEdit.field === 'price' ? (
+                                                            <input autoFocus value={inlineEdit.val} onChange={e => setInlineEdit(v => ({ ...v, val: e.target.value }))} onBlur={() => handleInlineUpdate(p.id, 'price')} onKeyDown={e => e.key === 'Enter' && handleInlineUpdate(p.id, 'price')} style={{ width: 60, background: '#1e2a3a', border: '1px solid #3b82f6', color: '#fff', padding: '2px 4px', borderRadius: 4, fontSize: '0.85rem' }} />
+                                                        ) : (
+                                                            <div onClick={() => setInlineEdit({ id: p.id, field: 'price', val: String(p.price) })} style={{ cursor: 'pointer', padding: '2px 4px', borderRadius: 4 }}>
+                                                                <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
+                                                                {p.oldPrice && <div style={{ color: '#ef4444', fontSize: '0.72rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {inlineEdit.id === p.id && inlineEdit.field === 'stock' ? (
+                                                            <input autoFocus type="number" value={inlineEdit.val} onChange={e => setInlineEdit(v => ({ ...v, val: e.target.value }))} onBlur={() => handleInlineUpdate(p.id, 'stock')} onKeyDown={e => e.key === 'Enter' && handleInlineUpdate(p.id, 'stock')} style={{ width: 50, background: '#1e2a3a', border: '1px solid #3b82f6', color: '#fff', padding: '2px 4px', borderRadius: 4, fontSize: '0.85rem' }} />
+                                                        ) : (
+                                                            <div onClick={() => setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) })} style={{ cursor: 'pointer', color: stockColor(p.stock), fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                {p.stock} {p.stock <= 5 && <FiAlertTriangle size={12} />}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                                            <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#facc15' : '#334155', transition: 'transform 0.2s' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.8)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>
+                                                                <FiStar size={18} fill={p.featured ? '#facc15' : 'none'} />
+                                                            </button>
+                                                            <MerchBadge slot={p.merchandisingSlot} />
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa' }}><FiEdit2 size={14} /></button>
+                                                            <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    );
+                                })
                                 : filtered.map(p => (
-                                    <tr key={p.id} className="ap-prod-row"
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <tr key={p.id} className="ap-prod-row" style={{ opacity: p.stock === 0 ? 0.7 : 1, background: selectedIds.includes(p.id) ? 'rgba(99,102,241,0.05)' : 'transparent' }}>
+                                        <td><input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} style={{ cursor: 'pointer' }} /></td>
                                         <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
-                                                <div>
-                                                    <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{p.name}</div>
-                                                    <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}{p.barcode ? ` · 🔳 ${p.barcode}` : ''}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <img src={p.image} alt={p.name} style={{ width: 42, height: 42, borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                                    <div style={{ color: '#475569', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                        #{p.id}{p.barcode && <><span style={{ opacity: 0.3 }}>|</span> <FiZap size={10} /> {p.barcode}</>}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td><span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span></td>
+                                        <td><span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{p.category}</span></td>
                                         <td>
-                                            <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
-                                            {p.oldPrice && <div style={{ color: '#475569', fontSize: '0.75rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
+                                            {inlineEdit.id === p.id && inlineEdit.field === 'price' ? (
+                                                <input autoFocus value={inlineEdit.val} onChange={e => setInlineEdit(v => ({ ...v, val: e.target.value }))} onBlur={() => handleInlineUpdate(p.id, 'price')} onKeyDown={e => e.key === 'Enter' && handleInlineUpdate(p.id, 'price')} style={{ width: 60, background: '#1e2a3a', border: '1px solid #3b82f6', color: '#fff', padding: '2px 4px', borderRadius: 4, fontSize: '0.85rem' }} />
+                                            ) : (
+                                                <div onClick={() => setInlineEdit({ id: p.id, field: 'price', val: String(p.price) })} style={{ cursor: 'pointer', padding: '2px 4px', borderRadius: 4 }}>
+                                                    <div style={{ fontWeight: 800, color: '#fff', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
+                                                    {p.oldPrice && <div style={{ color: '#ef4444', fontSize: '0.72rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
+                                                </div>
+                                            )}
                                         </td>
-                                        <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
                                         <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
-                                                    <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
+                                            {inlineEdit.id === p.id && inlineEdit.field === 'stock' ? (
+                                                <input autoFocus type="number" value={inlineEdit.val} onChange={e => setInlineEdit(v => ({ ...v, val: e.target.value }))} onBlur={() => handleInlineUpdate(p.id, 'stock')} onKeyDown={e => e.key === 'Enter' && handleInlineUpdate(p.id, 'stock')} style={{ width: 50, background: '#1e2a3a', border: '1px solid #3b82f6', color: '#fff', padding: '2px 4px', borderRadius: 4, fontSize: '0.85rem' }} />
+                                            ) : (
+                                                <div onClick={() => setInlineEdit({ id: p.id, field: 'stock', val: String(p.stock) })} style={{ cursor: 'pointer', color: stockColor(p.stock), fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    {p.stock} {p.stock <= 5 && <FiAlertTriangle size={12} />}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                                <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#facc15' : '#334155', transition: 'transform 0.2s' }} onMouseDown={e => e.currentTarget.style.transform = 'scale(0.8)'} onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}>
+                                                    <FiStar size={18} fill={p.featured ? '#facc15' : 'none'} />
                                                 </button>
-                                                {p.merchandisingSlot && p.merchandisingSlot !== 'none' && (
-                                                    <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
-                                                        {p.merchandisingSlot[0]}
-                                                    </span>
-                                                )}
+                                                <MerchBadge slot={p.merchandisingSlot} />
                                             </div>
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
-                                                <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                                                <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', color: '#60a5fa' }}><FiEdit2 size={14} /></button>
+                                                <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                ))
+                            }
                         </tbody>
                     </table>
                 </div>
