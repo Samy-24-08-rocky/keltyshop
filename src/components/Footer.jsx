@@ -45,7 +45,56 @@ const perks = [
 ];
 
 export default function Footer() {
+  const [isScrolled, setIsScrolled] = React.useState(false);
+  const [storeStatus, setStoreStatus] = React.useState({ open: true, message: 'Open Now' });
+
+  // Update scroll state for "Back to Top" visibility
+  React.useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 400);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Calculate if store is currently open
+  React.useEffect(() => {
+    const checkStatus = () => {
+      const now = new Date();
+      const day = now.getDay(); // 0 is Sunday, 1-5 Mon-Fri, 6 Sat
+      const hour = now.getHours();
+
+      let open = false;
+      if (day >= 1 && day <= 5) open = (hour >= 7 && hour < 21); // Mon-Fri: 7am-9pm
+      else if (day === 6) open = (hour >= 8 && hour < 20);      // Sat: 8am-8pm
+      else open = (hour >= 9 && hour < 18);                     // Sun: 9am-6pm
+
+      setStoreStatus({
+        open,
+        message: open ? 'Open Now' : 'Closed Now'
+      });
+    };
+    checkStatus();
+    const timer = setInterval(checkStatus, 60000); // Check every minute
+    return () => clearInterval(timer);
+  }, []);
+
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const notify = (msg, type = 'info') => {
+    window.dispatchEvent(new CustomEvent('cartNotification', {
+      detail: { message: msg, type }
+    }));
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    notify(`${label} copied to clipboard!`, 'success');
+  };
+
+  const scrollToHours = () => {
+    const el = document.getElementById('footer-hours');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else notify(`We are currently ${storeStatus.message.toLowerCase()}`, 'info');
+  };
 
   return (
     <>
@@ -119,7 +168,17 @@ export default function Footer() {
       `}</style>
 
       {/* Scroll-to-top */}
-      <button className="scroll-top" onClick={scrollToTop} aria-label="Back to top">
+      <button
+        className="scroll-top"
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        style={{
+          opacity: isScrolled ? 1 : 0,
+          pointerEvents: isScrolled ? 'auto' : 'none',
+          transform: isScrolled ? 'translateY(0)' : 'translateY(20px)',
+          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}
+      >
         <FiArrowUp size={20} />
       </button>
 
@@ -199,7 +258,23 @@ export default function Footer() {
                       <Icon size={13} color="#f87171" />
                     </div>
                     {href
-                      ? <a href={href} style={{ color: '#94a3b8', fontSize: '0.8rem', textDecoration: 'none', transition: 'color .2s' }} onMouseEnter={e => e.target.style.color = '#f87171'} onMouseLeave={e => e.target.style.color = '#94a3b8'}>{text}</a>
+                      ? (
+                        <a
+                          href={href}
+                          onClick={(e) => {
+                            if (text.includes('@') || text.includes('+44')) {
+                              e.preventDefault();
+                              const cleanText = text.split(' · ')[0];
+                              copyToClipboard(cleanText, text.includes('@') ? 'Email' : 'Phone number');
+                            }
+                          }}
+                          style={{ color: '#94a3b8', fontSize: '0.8rem', textDecoration: 'none', transition: 'color .2s' }}
+                          onMouseEnter={e => e.target.style.color = '#f87171'}
+                          onMouseLeave={e => e.target.style.color = '#94a3b8'}
+                        >
+                          {text}
+                        </a>
+                      )
                       : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{text}</span>
                     }
                   </div>
@@ -238,7 +313,7 @@ export default function Footer() {
             </div>
 
             {/* ── Business Hours ── */}
-            <div>
+            <div id="footer-hours">
               <div className="col-title">Opening Hours</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {[
@@ -254,11 +329,28 @@ export default function Footer() {
                 ))}
               </div>
 
-              {/* Live status badge */}
-              <div style={{ marginTop: '1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 99, padding: '0.4rem 0.875rem' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80' }} />
-                <span style={{ color: '#4ade80', fontSize: '0.75rem', fontWeight: 700 }}>Open Now</span>
-              </div>
+              {/* Dynamic status badge */}
+              <button
+                onClick={scrollToHours}
+                style={{
+                  marginTop: '1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                  background: storeStatus.open ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)',
+                  border: `1px solid ${storeStatus.open ? 'rgba(74,222,128,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                  borderRadius: 99, padding: '0.4rem 0.875rem', cursor: 'pointer', transition: 'transform 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: storeStatus.open ? '#4ade80' : '#f87171',
+                  display: 'inline-block',
+                  boxShadow: `0 0 6px ${storeStatus.open ? '#4ade80' : '#f87171'}`
+                }} />
+                <span style={{ color: storeStatus.open ? '#4ade80' : '#f87171', fontSize: '0.75rem', fontWeight: 700 }}>
+                  {storeStatus.message}
+                </span>
+              </button>
             </div>
           </div>
         </div>
