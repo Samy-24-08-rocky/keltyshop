@@ -7,6 +7,8 @@ import {
     FiArrowUp, FiArrowDown, FiZap, FiUpload, FiLoader
 } from 'react-icons/fi';
 import { useRef } from 'react';
+import { storage } from '../../firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const STATUS_CFG = {
@@ -124,22 +126,23 @@ export default function AdminDashboard() {
         const file = e.target.files[0];
         if (!file) return;
         setUploading(true);
-        const data = new FormData();
-        data.append('file', file);
-        data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
-        try {
-            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'demo';
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-                method: 'POST',
-                body: data
-            });
-            const result = await res.json();
-            if (result.secure_url) sp('image', result.secure_url);
-        } catch (err) {
-            alert("Upload failed.");
-        } finally {
-            setUploading(false);
-        }
+
+        const storageRef = ref(storage, `product-images/${Date.now()}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+            null,
+            (error) => {
+                console.error("Upload failed:", error);
+                alert("Upload failed. Make sure Storage is enabled in Firebase Console.");
+                setUploading(false);
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                sp('image', downloadURL);
+                setUploading(false);
+            }
+        );
     };
 
     const BLANK_PRODUCT_EXT = { ...BLANK_PRODUCT, barcode: '', merchandisingSlot: 'none' };

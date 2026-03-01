@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { storage } from '../../firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAdmin } from '../../context/AdminContext';
 import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap, FiFilter, FiXCircle, FiTag, FiAlertCircle, FiChevronDown, FiChevronUp, FiUpload, FiLoader } from 'react-icons/fi';
 import BarcodeScanner from './BarcodeScanner';
@@ -58,26 +60,23 @@ export default function AdminProducts() {
         if (!file) return;
 
         setUploading(true);
-        const data = new FormData();
-        data.append('file', file);
-        data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
+        // Create a unique filename based on time
+        const storageRef = ref(storage, `product-images/${Date.now()}-${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-        try {
-            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'demo';
-            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-                method: 'POST',
-                body: data
-            });
-            const result = await res.json();
-            if (result.secure_url) {
-                setForm(f => ({ ...f, image: result.secure_url }));
+        uploadTask.on('state_changed',
+            null,
+            (error) => {
+                console.error("Upload failed:", error);
+                alert("Image upload failed. Please ensure Firebase Storage is enabled in your console and rules are set to public for testing.");
+                setUploading(false);
+            },
+            async () => {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                setForm(f => ({ ...f, image: downloadURL }));
+                setUploading(false);
             }
-        } catch (err) {
-            console.error("Upload failed:", err);
-            alert("Image upload failed. Please check your connection or use a direct URL.");
-        } finally {
-            setUploading(false);
-        }
+        );
     };
 
     const handleScannedProduct = (scannedData) => {

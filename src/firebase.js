@@ -2,6 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import {
     getAuth,
     GoogleAuthProvider,
@@ -30,6 +31,7 @@ const isFirebaseConfigured = !!import.meta.env.VITE_FIREBASE_API_KEY;
 let app;
 let auth;
 let db;
+let storage;
 let googleProvider;
 
 if (isFirebaseConfigured) {
@@ -37,6 +39,7 @@ if (isFirebaseConfigured) {
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
+        storage = getStorage(app);
         googleProvider = new GoogleAuthProvider();
 
         // Analytics — only initialise in browser environments (not SSR/Node)
@@ -55,6 +58,7 @@ if (isFirebaseConfigured) {
 export {
     auth,
     db,
+    storage,
     googleProvider,
     isFirebaseConfigured,
     createUserWithEmailAndPassword,
