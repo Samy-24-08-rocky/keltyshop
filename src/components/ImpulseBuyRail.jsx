@@ -12,13 +12,14 @@ const ImpulseBuyRail = ({ addToCart, cartItems = [] }) => {
 
     const cartIds = useMemo(() => new Set(cartItems.map(i => i.id)), [cartItems]);
 
-    const impulseProducts = useMemo(() =>
-        allProducts
-            .filter(p => IMPULSE_CATS.includes(p.category) && p.stock > 0 && !cartIds.has(p.id))
-            .sort((a, b) => b.rating - a.rating)
-            .slice(0, 10),
-        [allProducts, cartIds]
-    );
+    const impulseProducts = useMemo(() => {
+        const manuals = allProducts.filter(p => p.merchandisingSlot === 'impulse' && p.stock > 0 && !cartIds.has(p.id));
+        const auto = allProducts
+            .filter(p => IMPULSE_CATS.includes(p.category) && p.stock > 0 && !cartIds.has(p.id) && p.merchandisingSlot !== 'impulse')
+            .sort((a, b) => b.rating - a.rating);
+
+        return [...manuals, ...auto].slice(0, 10);
+    }, [allProducts, cartIds]);
 
     if (!impulseProducts.length) return null;
 

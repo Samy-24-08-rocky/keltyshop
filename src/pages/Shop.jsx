@@ -31,10 +31,15 @@ const SORT_OPTIONS = [
 // Golden zone: high-margin, featured, eye-level items = featured + high rating
 const goldenScore = (p) => {
   let score = 0;
+  // Absolute parity with AdminMerchandising.jsx
+  if (p.merchandisingSlot === 'golden') return 500;
+  if (p.merchandisingSlot === 'hotspot') return 400;
+  if (p.merchandisingSlot === 'impulse') return 300;
+
   if (p.featured) score += 40;
   if (p.rating >= 4.7) score += 30;
   if (p.oldPrice && p.oldPrice > p.price) score += 20;
-  if (p.stock > 0 && p.stock <= 5) score += 10; // scarcity
+  if (p.stock > 0 && p.stock <= 5) score += 10;
   return score;
 };
 
@@ -50,7 +55,7 @@ const Stars = ({ rating }) => (
 );
 
 const ShelfBadge = ({ p }) => {
-  if (p.featured && p.rating >= 4.8) {
+  if (p.merchandisingSlot === 'golden' || (p.featured && p.rating >= 4.8)) {
     return (
       <div style={{
         position: 'absolute', top: 10, left: 10, zIndex: 3,
@@ -60,7 +65,7 @@ const ShelfBadge = ({ p }) => {
         textTransform: 'uppercase', boxShadow: '0 3px 10px rgba(246,173,85,0.5)',
         display: 'flex', alignItems: 'center', gap: 3,
       }}>
-        <FiAward size={9} /> Golden Zone
+        <FiAward size={9} /> {p.merchandisingSlot === 'golden' ? 'Premium Placement' : 'Golden Zone'}
       </div>
     );
   }

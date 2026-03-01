@@ -44,6 +44,9 @@ const FeaturedProducts = ({ addToCart, expanded = false }) => {
 
   const goldenScore = (p) => {
     let score = 0;
+    if (p.merchandisingSlot === 'golden') return 500;
+    if (p.merchandisingSlot === 'hotspot') return 400;
+
     if (p.featured) score += 40;
     if (p.rating >= 4.7) score += 30;
     if (p.oldPrice && p.oldPrice > p.price) score += 20;

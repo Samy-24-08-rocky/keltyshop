@@ -11,13 +11,16 @@ const SPOTS = [
         color: 'linear-gradient(135deg,#e53e3e,#c53030)',
         bg: 'linear-gradient(135deg,rgba(229,62,62,0.08),rgba(229,62,62,0.03))',
         border: 'rgba(229,62,62,0.2)',
-        filter: (products) => products.filter(p => p.oldPrice && p.oldPrice > p.price && p.stock > 0)
-            .sort((a, b) => {
-                const da = Math.round(((a.oldPrice - a.price) / a.oldPrice) * 100);
-                const db = Math.round(((b.oldPrice - b.price) / b.oldPrice) * 100);
-                return db - da;
-            })
-            .slice(0, 3),
+        filter: (products) => {
+            const manuals = products.filter(p => p.merchandisingSlot === 'hotspot' && p.stock > 0);
+            const others = products.filter(p => p.oldPrice && p.oldPrice > p.price && p.stock > 0 && p.merchandisingSlot !== 'hotspot')
+                .sort((a, b) => {
+                    const da = ((a.oldPrice - a.price) / a.oldPrice);
+                    const db = ((b.oldPrice - b.price) / b.oldPrice);
+                    return db - da;
+                });
+            return [...manuals, ...others].slice(0, 3);
+        }
     },
     {
         key: 'newArrivals',

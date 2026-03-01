@@ -5,7 +5,11 @@ import BarcodeScanner from './BarcodeScanner';
 
 const CATEGORIES = ['Pantry', 'Condiments', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Drinks', 'Snacks'];
 
-const blank = { name: '', price: '', oldPrice: '', category: 'Pantry', stock: '', image: '', rating: '4.5', featured: false, barcode: '' };
+const blank = {
+    name: '', price: '', oldPrice: '', category: 'Pantry', stock: '',
+    image: '', rating: '4.5', featured: false, barcode: '',
+    merchandisingSlot: 'none' // 'none', 'golden', 'hotspot', 'impulse'
+};
 
 const Input = ({ label, ...props }) => (
     <div style={{ marginBottom: '1rem' }}>
@@ -44,7 +48,24 @@ export default function AdminProducts() {
     );
 
     const openAdd = () => { setForm(blank); setEditId(null); setModal('edit'); };
-    const openEdit = (p) => { setForm({ ...p, price: String(p.price), oldPrice: String(p.oldPrice ?? ''), stock: String(p.stock) }); setEditId(p.id); setModal('edit'); };
+    const openEdit = (p) => {
+        setForm({
+            ...p,
+            price: String(p.price),
+            oldPrice: String(p.oldPrice ?? ''),
+            stock: String(p.stock),
+            merchandisingSlot: p.merchandisingSlot || 'none'
+        });
+        setEditId(p.id);
+        setModal('edit');
+    };
+
+    const applyDiscount = (percent) => {
+        const p = parseFloat(form.price);
+        if (!p) return;
+        const old = p / (1 - percent / 100);
+        setForm(f => ({ ...f, oldPrice: old.toFixed(2) }));
+    };
 
     const handleSave = () => {
         const data = { ...form, price: parseFloat(form.price) || 0, oldPrice: form.oldPrice ? parseFloat(form.oldPrice) : null, stock: parseInt(form.stock) || 0, rating: parseFloat(form.rating) || 4.5 };
@@ -140,9 +161,16 @@ export default function AdminProducts() {
                                     </td>
                                     <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
                                     <td>
-                                        <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
-                                            <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
-                                        </button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
+                                                <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
+                                            </button>
+                                            {p.merchandisingSlot !== 'none' && (
+                                                <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
+                                                    {p.merchandisingSlot[0]}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -219,12 +247,36 @@ export default function AdminProducts() {
                             <Input label="Stock" type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="10" />
                             <Input label="Rating (0–5)" type="number" step="0.1" max="5" value={form.rating} onChange={e => setForm(f => ({ ...f, rating: e.target.value }))} placeholder="4.5" />
                         </div>
-                        <Select label="Category" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} options={CATEGORIES} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <Select
+                                label="Merchandising Zone"
+                                value={form.merchandisingSlot}
+                                onChange={e => setForm(f => ({ ...f, merchandisingSlot: e.target.value }))}
+                                options={[
+                                    { label: 'Regular Placement', value: 'none' },
+                                    { label: '⭐ Golden Zone (Top Shelf)', value: 'golden' },
+                                    { label: '🔥 Home Endcap (Hot Spot)', value: 'hotspot' },
+                                    { label: '🛒 Checkout Impulse Buy', value: 'impulse' }
+                                ].map(o => o.value)}
+                            />
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500, marginBottom: '0.375rem' }}>Discount Helper</label>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    {[10, 25, 50].map(v => (
+                                        <button key={v} onClick={() => applyDiscount(v)} style={{ flex: 1, padding: '0.5rem 0.25rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', borderRadius: 6, fontSize: '0.7rem', cursor: 'pointer' }}>
+                                            -{v}%
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', marginBottom: '1.5rem' }}>
                             <input type="checkbox" checked={form.featured} onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#ef4444' }} />
                             <span style={{ color: '#e2e8f0', fontSize: '0.875rem' }}>Show on Featured / Homepage</span>
                         </label>
                         {form.image && <img src={form.image} alt="preview" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 10, marginBottom: '1rem' }} onError={e => e.target.style.display = 'none'} />}
+
                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                             <button onClick={() => setModal(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>Cancel</button>
                             <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.5rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', cursor: 'pointer', fontWeight: 600 }}>

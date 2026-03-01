@@ -23,9 +23,14 @@ export default function AdminMerchandising() {
         });
     };
 
-    // Helper for Golden Zone scoring (copied logic from Shop.jsx)
+    // Helper for Golden Zone scoring
     const goldenScore = (p) => {
         let score = 0;
+        // Absolute priority for manual marks
+        if (p.merchandisingSlot === 'golden') return 500;
+        if (p.merchandisingSlot === 'hotspot') return 400;
+        if (p.merchandisingSlot === 'impulse') return 300;
+
         if (p.featured) score += 40;
         if (p.rating >= 4.7) score += 30;
         if (p.oldPrice && p.oldPrice > p.price) score += 20;
@@ -37,6 +42,7 @@ export default function AdminMerchandising() {
         .map(p => ({ ...p, score: goldenScore(p) }))
         .sort((a, b) => b.score - a.score)
         .slice(0, 5);
+
 
     const STRATEGIES = [
         {
