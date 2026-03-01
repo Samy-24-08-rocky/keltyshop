@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../context/AdminContext';
 import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap } from 'react-icons/fi';
 import BarcodeScanner from './BarcodeScanner';

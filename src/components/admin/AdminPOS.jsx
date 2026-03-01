@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAdmin } from '../../context/AdminContext';
 import {
     FiSearch, FiTrash2, FiPrinter, FiCheckCircle, FiXCircle,
