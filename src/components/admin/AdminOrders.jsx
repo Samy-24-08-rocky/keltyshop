@@ -58,6 +58,12 @@ export default function AdminOrders() {
     const [trashView, setTrashView] = useState(false);
     // confirm: null | { id, step: 'soft' | 'permanent' }
     const [confirm, setConfirm] = useState(null);
+    const [notification, setNotification] = useState(null);
+
+    const notify = (msg, type = 'success') => {
+        setNotification({ msg, type });
+        setTimeout(() => setNotification(null), 3000);
+    };
 
     // Confirm-order modal
     const [confirmModal, setConfirmModal] = useState(null);
@@ -196,7 +202,10 @@ export default function AdminOrders() {
                                     <div style={{ color: '#94a3b8', fontSize: '0.82rem' }}>£{Number(o.total).toFixed(2)}</div>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <button
-                                            onClick={() => restoreOrder(o.id)}
+                                            onClick={() => {
+                                                restoreOrder(o.id);
+                                                notify(`Order ${o.id} restored to Active list`, 'success');
+                                            }}
                                             title="Restore order"
                                             style={{
                                                 display: 'flex', alignItems: 'center', gap: '0.35rem',
@@ -274,8 +283,16 @@ export default function AdminOrders() {
                                         <button onClick={() => openEdit(o)} title="Edit" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
                                             <FiEdit2 size={13} />
                                         </button>
-                                        {/* Move to Trash */}
-                                        <button onClick={() => setConfirm({ id: o.id, step: 'soft' })} title="Move to Trash" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}>
+                                        {/* Instant Move to Trash */}
+                                        <button
+                                            onClick={() => {
+                                                softDeleteOrder(o.id);
+                                                setExpanded(null);
+                                                notify(`Order ${o.id} moved to Trash 🗑️`, 'info');
+                                            }}
+                                            title="Move to Trash"
+                                            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', borderRadius: 8, padding: '0.35rem 0.55rem', cursor: 'pointer' }}
+                                        >
                                             <FiTrash2 size={13} />
                                         </button>
                                     </div>
@@ -401,62 +418,53 @@ export default function AdminOrders() {
                 </div>
             )}
 
-            {/* ── Delete Modal (soft → trash OR permanent) ── */}
-            {confirm && (
+            {/* ── Permanent Delete Modal (ONLY from Trash) ── */}
+            {confirm && confirm.step === 'permanent' && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                     <div style={{
                         background: '#1e2a3a',
-                        border: `1px solid ${confirm.step === 'permanent' ? 'rgba(239,68,68,0.5)' : 'rgba(255,165,0,0.3)'}`,
+                        border: '1px solid rgba(239,68,68,0.5)',
                         borderRadius: 20, padding: '2rem', maxWidth: 380, width: '90%', textAlign: 'center',
                     }}>
                         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                            {confirm.step === 'permanent'
-                                ? <FiAlertOctagon size={26} color="#ef4444" />
-                                : <FiTrash2 size={26} color="#f97316" />}
+                            <FiAlertOctagon size={26} color="#ef4444" />
                         </div>
-
-                        {confirm.step === 'soft' ? (
-                            <>
-                                <h3 style={{ color: '#f1f5f9', margin: '0 0 0.5rem', fontWeight: 700 }}>Move to Trash?</h3>
-                                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                                    Order <code style={{ color: '#a5b4fc' }}>{confirm.id}</code> will be moved to trash.
-                                </p>
-                                <p style={{ color: '#64748b', fontSize: '0.78rem', marginBottom: '1.5rem' }}>
-                                    You can restore it anytime from the <strong style={{ color: '#94a3b8' }}>Trash</strong> tab.
-                                </p>
-                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                                    <button onClick={() => setConfirm(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
-                                    <button
-                                        onClick={() => { softDeleteOrder(confirm.id); setConfirm(null); setExpanded(null); }}
-                                        style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
-                                    >
-                                        Move to Trash
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <h3 style={{ color: '#ef4444', margin: '0 0 0.5rem', fontWeight: 700 }}>Delete Forever?</h3>
-                                <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                                    Order <code style={{ color: '#fca5a5' }}>{confirm.id}</code>
-                                </p>
-                                <p style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, marginBottom: '1.5rem' }}>
-                                    ⚠️ This will permanently delete from Firestore. Cannot be undone.
-                                </p>
-                                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                                    <button onClick={() => setConfirm(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
-                                    <button
-                                        onClick={() => { deleteOrder(confirm.id); setConfirm(null); }}
-                                        style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
-                                    >
-                                        Delete Forever
-                                    </button>
-                                </div>
-                            </>
-                        )}
+                        <h3 style={{ color: '#ef4444', margin: '0 0 0.5rem', fontWeight: 700 }}>Delete Forever?</h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                            Order <code style={{ color: '#fca5a5' }}>{confirm.id}</code>
+                        </p>
+                        <p style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, marginBottom: '1.5rem' }}>
+                            ⚠️ This will permanently delete from Firestore. Cannot be undone.
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                            <button onClick={() => setConfirm(null)} style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+                            <button
+                                onClick={() => { deleteOrder(confirm.id); setConfirm(null); notify(`Order ${confirm.id} deleted permanently`, 'error'); }}
+                                style={{ padding: '0.65rem 1.25rem', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                                Delete Forever
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
+
+            {/* Notification Toast */}
+            {notification && (
+                <div style={{
+                    position: 'fixed', bottom: 30, right: 30, zIndex: 9999,
+                    background: notification.type === 'error' ? '#ef4444' : notification.type === 'info' ? '#3b82f6' : '#10b981',
+                    color: 'white', padding: '0.75rem 1.5rem', borderRadius: 12, fontWeight: 600,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)', animation: 'apFadeUp 0.3s ease'
+                }}>
+                    {notification.msg}
+                </div>
+            )}
+
+            <style>{`
+                @keyframes apFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
+
 
             {/* ── Add / Edit Order Modal ── */}
             {modal === 'form' && (

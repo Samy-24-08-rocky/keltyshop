@@ -297,18 +297,19 @@ export const AdminProvider = ({ children }) => {
         if (target?._docId) await deleteTestimonialFS(target._docId);
     }, [testimonials]);
 
-    // ── Stats ─────────────────────────────────────────────────────────────────
+    // ── Stats (Excluding trashed items) ──────────────────────────────────────
     const stats = {
-        totalRevenue: orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0),
-        totalOrders: orders.length,
-        pendingOrders: orders.filter(o => o.status === 'processing').length,
-        outForDelivery: orders.filter(o => o.status === 'out_for_delivery').length,
-        deliveredOrders: orders.filter(o => o.status === 'delivered').length,
-        cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+        totalRevenue: orders.filter(o => !o._deleted && o.status !== 'cancelled').reduce((s, o) => s + o.total, 0),
+        totalOrders: orders.filter(o => !o._deleted).length,
+        pendingOrders: orders.filter(o => !o._deleted && o.status === 'processing').length,
+        outForDelivery: orders.filter(o => !o._deleted && o.status === 'out_for_delivery').length,
+        deliveredOrders: orders.filter(o => !o._deleted && o.status === 'delivered').length,
+        cancelledOrders: orders.filter(o => !o._deleted && o.status === 'cancelled').length,
         totalProducts: products.length,
         lowStockProducts: products.filter(p => p.stock > 0 && p.stock <= 5).length,
         outOfStockProducts: products.filter(p => p.stock === 0).length,
-        totalCustomers: [...new Set(orders.map(o => o.email))].length,
+        totalCustomers: [...new Set(orders.filter(o => !o._deleted).map(o => o.email))].length,
+        trashedOrdersCount: orders.filter(o => o._deleted).length,
     };
 
     return (
