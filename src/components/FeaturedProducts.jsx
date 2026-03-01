@@ -42,10 +42,24 @@ const FeaturedProducts = ({ addToCart, expanded = false }) => {
     }));
   };
 
+  const goldenScore = (p) => {
+    let score = 0;
+    if (p.featured) score += 40;
+    if (p.rating >= 4.7) score += 30;
+    if (p.oldPrice && p.oldPrice > p.price) score += 20;
+    if (p.stock > 0 && p.stock <= 5) score += 10;
+    return score;
+  };
+
   const featuredCount = settings?.featuredProductsCount ?? 8;
+  const m = settings?.merchandising ?? {};
+
   const products = expanded
     ? allProducts
-    : allProducts.filter(p => p.featured).slice(0, featuredCount);
+    : [...allProducts]
+      .filter(p => p.featured)
+      .sort((a, b) => m.goldenZoneEnabled ? goldenScore(b) - goldenScore(a) : 0)
+      .slice(0, featuredCount);
 
   return (
     <>

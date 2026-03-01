@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { FiShoppingCart, FiHeart, FiArrowLeft, FiAlertCircle } from 'react-icons/fi';
 import { useAdmin } from '../context/AdminContext';
 import { useUserData } from '../context/UserDataContext';
+import CrossMerchandising from '../components/CrossMerchandising';
 
 const Stars = ({ rating }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -17,7 +18,8 @@ const Stars = ({ rating }) => (
 
 const ProductDetail = ({ addToCart }) => {
   const { id } = useParams();
-  const { products } = useAdmin();
+  const { products, settings } = useAdmin();
+  const m = settings?.merchandising ?? {};
   const { toggleWishlist, isWishlisted } = useUserData();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -207,6 +209,9 @@ const ProductDetail = ({ addToCart }) => {
             </div>
           </div>
         </div>
+
+        {/* Cross-merchandising: "Pairs Great With" */}
+        {m.showCrossSell && <CrossMerchandising product={product} addToCart={addToCart} />}
       </div>
     </div>
   );

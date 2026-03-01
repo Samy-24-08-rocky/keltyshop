@@ -75,6 +75,13 @@ const INITIAL_SETTINGS = {
     featuredProductsCount: 8,
     orderConfirmation: 'auto',
     heroProductId: 5,
+    merchandising: {
+        showHotSpots: true,
+        showCrossSell: true,
+        showImpulseRail: true,
+        goldenZoneEnabled: true,
+        smartAislesEnabled: true
+    },
     deliveryOptions: [
         { id: 'standard', label: 'Standard Delivery', description: 'Delivered by Royal Mail · 2–3 business days', time: '2–3 business days', price: 3.99, enabled: true },
         { id: 'express', label: 'Express Delivery', description: 'Order before 3 pm for next-day delivery', time: 'Next day', price: 6.99, enabled: true },

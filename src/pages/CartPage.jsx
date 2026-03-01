@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiShoppingBag, FiArrowLeft, FiHeart, FiTrash2 } from 'react-icons/fi';
+import ImpulseBuyRail from '../components/ImpulseBuyRail';
+import { useAdmin } from '../context/AdminContext';
 
 const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
   const [savedItems, setSavedItems] = useState([]);
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
-  
+  const { settings } = useAdmin();
+  const m = settings?.merchandising ?? {};
+
   const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
   const tax = subtotal * 0.05;
   const discount = discountApplied ? subtotal * 0.1 : 0; // 10% discount
@@ -18,7 +22,7 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
   };
 
   const moveToCart = (item) => {
-    addToCart({...item, quantity: 1});
+    addToCart({ ...item, quantity: 1 });
     setSavedItems(prev => prev.filter(i => i.id !== item.id));
   };
 
@@ -34,9 +38,9 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
         <Link to="/shop" className="inline-flex items-center text-red-600 hover:text-red-800 mb-6">
           <FiArrowLeft className="mr-2" /> Continue Shopping
         </Link>
-        
+
         <h1 className="text-3xl font-bold text-gray-900">Your Shopping Cart</h1>
-        
+
         {cartItems.length === 0 && savedItems.length === 0 ? (
           <div className="mt-16 flex flex-col items-center justify-center py-12">
             <FiShoppingBag className="h-24 w-24 text-gray-300" />
@@ -158,8 +162,11 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
                   </ul>
                 </div>
               )}
+
+              {/* ── Impulse-buy rail (checkout hot picks) ── */}
+              {m.showImpulseRail && <ImpulseBuyRail addToCart={addToCart} cartItems={cartItems} />}
             </div>
-            
+
             <div className="mt-8 lg:mt-0 lg:col-span-4">
               <div className="bg-white shadow sm:rounded-lg p-6 sticky top-4">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
@@ -168,25 +175,25 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
                     <p className="text-sm text-gray-600">Subtotal</p>
                     <p className="text-sm font-medium text-gray-900">£{subtotal.toFixed(2)}</p>
                   </div>
-                  
+
                   {discountApplied && (
                     <div className="flex justify-between text-green-600">
                       <p className="text-sm">Discount (SAVE10)</p>
                       <p className="text-sm font-medium">-£{discount.toFixed(2)}</p>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-between">
                     <p className="text-sm text-gray-600">Tax</p>
                     <p className="text-sm font-medium text-gray-900">£{tax.toFixed(2)}</p>
                   </div>
-                  
+
                   <div className="border-t border-gray-200 pt-4 flex justify-between">
                     <p className="text-base font-medium text-gray-900">Total</p>
                     <p className="text-base font-bold text-gray-900">£{total.toFixed(2)}</p>
                   </div>
                 </div>
-                
+
                 {!discountApplied && (
                   <div className="mt-6">
                     <div className="flex">
@@ -206,7 +213,7 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="mt-6">
                   <Link
                     to="/checkout"
@@ -216,8 +223,8 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
                   </Link>
                 </div>
                 <div className="mt-6 text-center">
-                  <Link 
-                    to="/shop" 
+                  <Link
+                    to="/shop"
                     className="text-red-600 hover:text-red-500 text-sm font-medium"
                   >
                     Continue Shopping
@@ -228,7 +235,7 @@ const CartPage = ({ cartItems, removeFromCart, updateQuantity, addToCart }) => {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 
