@@ -35,6 +35,7 @@ export default function AdminProducts() {
     const [editId, setEditId] = useState(null);
     const [confirm, setConfirm] = useState(null);
     const [showScanner, setShowScanner] = useState(false);
+    const [viewMode, setViewMode] = useState('grouped'); // 'list' | 'grouped'
 
     const handleScannedProduct = (scannedData) => {
         setForm({ ...blank, ...scannedData, price: '', oldPrice: '', stock: '' });
@@ -45,7 +46,13 @@ export default function AdminProducts() {
     const filtered = products.filter(p =>
         (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (p.category || '').toLowerCase().includes(search.toLowerCase())
-    );
+    ).sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+
+    const grouped = filtered.reduce((acc, p) => {
+        if (!acc[p.category]) acc[p.category] = [];
+        acc[p.category].push(p);
+        return acc;
+    }, {});
 
     const openAdd = () => { setForm(blank); setEditId(null); setModal('edit'); };
     const openEdit = (p) => {
@@ -88,6 +95,9 @@ export default function AdminProducts() {
                 {/* Scan Barcode */}
                 <button onClick={() => setShowScanner(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(99,102,241,0.35)', flexShrink: 0 }}>
                     <FiZap size={16} /> Scan Barcode
+                </button>
+                <button onClick={() => setViewMode(v => v === 'list' ? 'grouped' : 'list')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.1rem', background: viewMode === 'grouped' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)', color: viewMode === 'grouped' ? '#10b981' : '#94a3b8', border: `1px solid ${viewMode === 'grouped' ? '#10b981' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', flexShrink: 0 }}>
+                    <FiFilter size={16} /> {viewMode === 'grouped' ? 'Showing Groups' : 'Plain List'}
                 </button>
                 <button onClick={openAdd} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', boxShadow: '0 4px 12px rgba(239,68,68,0.35)', flexShrink: 0 }}>
                     <FiPlus size={16} /> Add Product
@@ -141,73 +151,146 @@ export default function AdminProducts() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map(p => (
-                                <tr key={p.id} className="ap-prod-row"
-                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
-                                            <div>
-                                                <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{p.name}</div>
-                                                <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}{p.barcode ? ` · 🔳 ${p.barcode}` : ''}</div>
+                            {viewMode === 'grouped'
+                                ? Object.entries(grouped).map(([cat, items]) => (
+                                    <React.Fragment key={cat}>
+                                        <tr style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                            <td colSpan="6" style={{ padding: '0.5rem 1rem', fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                📦 {cat} ({items.length})
+                                            </td>
+                                        </tr>
+                                        {items.map(p => (
+                                            <tr key={p.id} className="ap-prod-row">
+                                                {/* (Row content exactly same as before) */}
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
+                                                        <div>
+                                                            <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{p.name}</div>
+                                                            <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}{p.barcode ? ` · 🔳 ${p.barcode}` : ''}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td><span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span></td>
+                                                <td>
+                                                    <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
+                                                    {p.oldPrice && <div style={{ color: '#475569', fontSize: '0.75rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
+                                                </td>
+                                                <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                        <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
+                                                            <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
+                                                        </button>
+                                                        {p.merchandisingSlot && p.merchandisingSlot !== 'none' && (
+                                                            <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
+                                                                {p.merchandisingSlot[0]}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
+                                                        <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                ))
+                                : filtered.map(p => (
+                                    <tr key={p.id} className="ap-prod-row"
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.875rem' }}>{p.name}</div>
+                                                    <div style={{ color: '#475569', fontSize: '0.72rem' }}>ID #{p.id}{p.barcode ? ` · 🔳 ${p.barcode}` : ''}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td><span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span></td>
-                                    <td>
-                                        <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
-                                        {p.oldPrice && <div style={{ color: '#475569', fontSize: '0.75rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
-                                    </td>
-                                    <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
-                                                <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
-                                            </button>
-                                            {p.merchandisingSlot && p.merchandisingSlot !== 'none' && (
-                                                <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
-                                                    {p.merchandisingSlot[0]}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
-                                            <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td><span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '2px 9px', borderRadius: 99, fontSize: '0.75rem', fontWeight: 600 }}>{p.category}</span></td>
+                                        <td>
+                                            <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.9rem' }}>£{p.price.toFixed(2)}</div>
+                                            {p.oldPrice && <div style={{ color: '#475569', fontSize: '0.75rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</div>}
+                                        </td>
+                                        <td><span style={{ color: stockColor(p.stock), fontSize: '0.8rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span></td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
+                                                    <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
+                                                </button>
+                                                {p.merchandisingSlot && p.merchandisingSlot !== 'none' && (
+                                                    <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
+                                                        {p.merchandisingSlot[0]}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
+                                                <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
                         </tbody>
                     </table>
                 </div>
 
                 {/* ── Mobile Cards ── */}
                 <div className="ap-prod-cards">
-                    {filtered.map(p => (
-                        <div key={p.id} className="ap-prod-card">
-                            <img src={p.image} alt={p.name} className="ap-prod-card-img" />
-                            <div className="ap-prod-card-body">
-                                <div className="ap-prod-card-name">{p.name}</div>
-                                <div className="ap-prod-card-meta">
-                                    <span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '1px 7px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 600 }}>{p.category}</span>
-                                    <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.85rem' }}>£{p.price.toFixed(2)}</span>
-                                    {p.oldPrice && <span style={{ color: '#475569', fontSize: '0.72rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</span>}
-                                    <span style={{ color: stockColor(p.stock), fontSize: '0.75rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span>
+                    {viewMode === 'grouped'
+                        ? Object.entries(grouped).map(([cat, items]) => (
+                            <div key={cat}>
+                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>
+                                    {cat}
+                                </div>
+                                {items.map(p => (
+                                    <div key={p.id} className="ap-prod-card">
+                                        <img src={p.image} alt={p.name} className="ap-prod-card-img" />
+                                        <div className="ap-prod-card-body">
+                                            <div className="ap-prod-card-name">{p.name}</div>
+                                            <div className="ap-prod-card-meta">
+                                                <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.85rem' }}>£{p.price.toFixed(2)}</span>
+                                                <span style={{ color: stockColor(p.stock), fontSize: '0.75rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="ap-prod-card-actions">
+                                            <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ color: '#93c5fd' }}><FiEdit2 size={14} /></button>
+                                            <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ color: '#fca5a5' }}><FiTrash2 size={14} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))
+                        : filtered.map(p => (
+                            <div key={p.id} className="ap-prod-card">
+                                <img src={p.image} alt={p.name} className="ap-prod-card-img" />
+                                <div className="ap-prod-card-body">
+                                    <div className="ap-prod-card-name">{p.name}</div>
+                                    <div className="ap-prod-card-meta">
+                                        <span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '1px 7px', borderRadius: 99, fontSize: '0.7rem', fontWeight: 600 }}>{p.category}</span>
+                                        <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.85rem' }}>£{p.price.toFixed(2)}</span>
+                                        {p.oldPrice && <span style={{ color: '#475569', fontSize: '0.72rem', textDecoration: 'line-through' }}>£{p.oldPrice.toFixed(2)}</span>}
+                                        <span style={{ color: stockColor(p.stock), fontSize: '0.75rem', fontWeight: 600 }}>{stockLabel(p.stock)}</span>
+                                    </div>
+                                </div>
+                                <div className="ap-prod-card-actions">
+                                    <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#475569', padding: '0.375rem', WebkitTapHighlightColor: 'transparent' }}>
+                                        <FiStar size={17} fill={p.featured ? '#fbbf24' : 'none'} />
+                                    </button>
+                                    <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
+                                    <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
                                 </div>
                             </div>
-                            <div className="ap-prod-card-actions">
-                                <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#475569', padding: '0.375rem', WebkitTapHighlightColor: 'transparent' }}>
-                                    <FiStar size={17} fill={p.featured ? '#fbbf24' : 'none'} />
-                                </button>
-                                <button onClick={() => openEdit(p)} className="ap-act-btn" style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.25)', color: '#93c5fd' }}><FiEdit2 size={14} /></button>
-                                <button onClick={() => setConfirm(p.id)} className="ap-act-btn" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5' }}><FiTrash2 size={14} /></button>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
                 </div>
+
 
                 {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>No products found.</div>}
             </div>

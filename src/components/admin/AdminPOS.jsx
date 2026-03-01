@@ -386,6 +386,7 @@ function WalkinPanel({ session, setSession, showAlert, settings, products, updat
     const [customer, setCustomer] = useState('');
     const [processing, setProcessing] = useState(false);
     const [receipt, setReceipt] = useState(null);
+    const [selectedCat, setSelectedCat] = useState('All');
     const scanRef = useRef(null);
 
     useEffect(() => { scanRef.current?.focus(); }, []);
@@ -474,13 +475,23 @@ function WalkinPanel({ session, setSession, showAlert, settings, products, updat
         } finally { setProcessing(false); }
     };
 
-    const filtered = searchQuery
-        ? products.filter(p =>
-            (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (p.barcode && p.barcode.includes(searchQuery)) ||
-            ((p.category || '').toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-        : products;
+    const filtered = useMemo(() => {
+        let res = products;
+        if (selectedCat !== 'All') {
+            res = res.filter(p => p.category === selectedCat);
+        }
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            res = res.filter(p =>
+                (p.name || '').toLowerCase().includes(q) ||
+                (p.barcode && p.barcode.includes(q)) ||
+                (p.category || '').toLowerCase().includes(q)
+            );
+        }
+        return res;
+    }, [products, selectedCat, searchQuery]);
+
+    const categories = useMemo(() => ['All', ...new Set(products.map(p => p.category).filter(Boolean))], [products]);
 
     return (
         <>
@@ -528,6 +539,26 @@ function WalkinPanel({ session, setSession, showAlert, settings, products, updat
                         <input className="pos-customer-input" style={{ marginBottom: '0.6rem' }}
                             placeholder="Filter by name, category, barcode…"
                             value={searchQuery} onChange={e => setSearchQuery(e.target.value)} id="pos-product-search" />
+
+                        {/* Categories bar */}
+                        <div style={{ display: 'flex', gap: '0.4rem', overflowX: 'auto', paddingBottom: '0.65rem', marginBottom: '0.2rem', whiteSpace: 'nowrap', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            {categories.map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setSelectedCat(cat)}
+                                    style={{
+                                        padding: '0.35rem 0.75rem', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                                        background: selectedCat === cat ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)',
+                                        color: selectedCat === cat ? '#10b981' : '#64748b',
+                                        border: `1px solid ${selectedCat === cat ? '#10b981' : 'rgba(255,255,255,0.08)'}`,
+                                        transition: 'all .15s'
+                                    }}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                        </div>
+
                         <div className="pos-grid">
                             {filtered.map(p => (
                                 <div key={p.id} className={`pos-grid-item${p.stock === 0 ? ' oos' : ''}`}
