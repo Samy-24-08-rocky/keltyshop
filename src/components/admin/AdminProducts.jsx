@@ -3,7 +3,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap, FiFilter, FiXCircle, FiTag, FiAlertCircle, FiChevronDown, FiChevronUp, FiUpload, FiLoader } from 'react-icons/fi';
 import BarcodeScanner from './BarcodeScanner';
 
-const CATEGORIES = ['Pantry', 'Condiments', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Drinks', 'Snacks'];
+const CATEGORIES = ['Pantry', 'Condiments', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Drinks', 'Snacks', 'Breakfast', 'Frozen'];
 
 const blank = {
     name: '', price: '', oldPrice: '', category: 'Pantry', stock: '',
@@ -108,7 +108,12 @@ export default function AdminProducts() {
         return acc;
     }, {});
 
-    const openAdd = () => { setForm(blank); setEditId(null); setModal('edit'); };
+    const openAdd = () => {
+        const defaultCat = selectedCat === 'All Categories' ? 'Pantry' : selectedCat;
+        setForm({ ...blank, category: defaultCat });
+        setEditId(null);
+        setModal('edit');
+    };
     const openEdit = (p) => {
         setForm({
             ...p,
@@ -579,7 +584,14 @@ export default function AdminProducts() {
                             <Input label="Stock" type="number" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="10" />
                             <Input label="Rating (0–5)" type="number" step="0.1" max="5" value={form.rating} onChange={e => setForm(f => ({ ...f, rating: e.target.value }))} placeholder="4.5" />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <Select
+                                label="Product Category"
+                                value={form.category}
+                                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                                options={CATEGORIES}
+                                style={{ border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)' }}
+                            />
                             <Select
                                 label="Merchandising Zone"
                                 value={form.merchandisingSlot}
@@ -591,6 +603,8 @@ export default function AdminProducts() {
                                     { label: '🛒 Checkout Impulse Buy', value: 'impulse' }
                                 ].map(o => o.value)}
                             />
+                        </div>
+                        <div style={{ marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 500, marginBottom: '0.375rem' }}>Discount Helper</label>
                                 <div style={{ display: 'flex', gap: '0.4rem' }}>

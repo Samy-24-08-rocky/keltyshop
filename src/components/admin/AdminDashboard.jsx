@@ -4,8 +4,9 @@ import {
     FiDollarSign, FiShoppingBag, FiTruck, FiPackage, FiAlertTriangle,
     FiUsers, FiCheckCircle, FiXCircle, FiPlus, FiEdit2, FiTrash2,
     FiRefreshCw, FiStar, FiTrendingUp, FiActivity, FiX, FiCheck,
-    FiArrowUp, FiArrowDown, FiZap,
+    FiArrowUp, FiArrowDown, FiZap, FiUpload, FiLoader
 } from 'react-icons/fi';
+import { useRef } from 'react';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const STATUS_CFG = {
@@ -116,6 +117,32 @@ export default function AdminDashboard() {
         addOrder, updateOrder, deleteOrder, updateOrderStatus,
         addProduct, updateProduct, deleteProduct, toggleFeatured,
     } = useAdmin();
+    const [uploading, setUploading] = useState(false);
+    const fileRef = useRef(null);
+
+    const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        const data = new FormData();
+        data.append('file', file);
+        data.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'ml_default');
+        try {
+            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'demo';
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+                method: 'POST',
+                body: data
+            });
+            const result = await res.json();
+            if (result.secure_url) sp('image', result.secure_url);
+        } catch (err) {
+            alert("Upload failed.");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const BLANK_PRODUCT_EXT = { ...BLANK_PRODUCT, barcode: '', merchandisingSlot: 'none' };
 
     // modals
     const [modal, setModal] = useState(null); // 'order-add'|'order-edit'|'product-add'|'product-edit'|'order-delete'|'product-delete'
@@ -157,8 +184,19 @@ export default function AdminDashboard() {
     };
 
     // Product actions
-    const openAddProduct = () => { setPForm(BLANK_PRODUCT); setEditPId(null); setModal('product-add'); };
-    const openEditProduct = p => { setPForm({ ...p, price: String(p.price), oldPrice: String(p.oldPrice ?? ''), stock: String(p.stock) }); setEditPId(p.id); setModal('product-edit'); };
+    const openAddProduct = () => { setPForm(BLANK_PRODUCT_EXT); setEditPId(null); setModal('product-add'); };
+    const openEditProduct = p => {
+        setPForm({
+            ...p,
+            price: String(p.price),
+            oldPrice: String(p.oldPrice ?? ''),
+            stock: String(p.stock),
+            barcode: p.barcode || '',
+            merchandisingSlot: p.merchandisingSlot || 'none'
+        });
+        setEditPId(p.id);
+        setModal('product-edit');
+    };
     const saveProduct = () => {
         const data = { ...pForm, price: parseFloat(pForm.price) || 0, oldPrice: pForm.oldPrice ? parseFloat(pForm.oldPrice) : null, stock: parseInt(pForm.stock) || 0, rating: parseFloat(pForm.rating) || 4.5 };
         if (editPId) updateProduct(editPId, data); else addProduct(data);
@@ -383,7 +421,21 @@ export default function AdminDashboard() {
             {(modal === 'product-add' || modal === 'product-edit') && (
                 <Modal title={editPId ? 'Edit Product' : 'Add Product'} subtitle={editPId ? 'Update product details' : 'Add a new product to the store'} onClose={() => setModal(null)}>
                     <Field label="Product Name"><input value={pForm.name} onChange={e => sp('name', e.target.value)} placeholder="e.g. Organic Apples" style={inputSx} /></Field>
-                    <Field label="Image URL"><input value={pForm.image} onChange={e => sp('image', e.target.value)} placeholder="https://..." style={inputSx} /></Field>
+                    <Field label="Barcode (optional)"><input value={pForm.barcode} onChange={e => sp('barcode', e.target.value)} placeholder="e.g. 501234..." style={inputSx} /></Field>
+
+                    <div style={{ position: 'relative' }}>
+                        <Field label="Image URL"><input value={pForm.image} onChange={e => sp('image', e.target.value)} placeholder="https://..." style={inputSx} /></Field>
+                        <button
+                            onClick={() => fileRef.current.click()}
+                            disabled={uploading}
+                            style={{ position: 'absolute', right: 8, top: 22, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', padding: '0.35rem 0.6rem', borderRadius: 8, fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                            {uploading ? <FiLoader className="spin" size={12} /> : <FiUpload size={12} />}
+                            {uploading ? '...' : 'Upload'}
+                        </button>
+                        <input type="file" ref={fileRef} onChange={handleUpload} style={{ display: 'none' }} accept="image/*" />
+                    </div>
+
                     {pForm.image && <img src={pForm.image} alt="preview" style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 10, marginBottom: '0.875rem' }} onError={e => e.target.style.display = 'none'} />}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 0.875rem' }}>
                         <Field label="Price (£)"><input type="number" step="0.01" value={pForm.price} onChange={e => sp('price', e.target.value)} placeholder="1.99" style={inputSx} /></Field>
@@ -391,7 +443,17 @@ export default function AdminDashboard() {
                         <Field label="Stock"><input type="number" value={pForm.stock} onChange={e => sp('stock', e.target.value)} placeholder="10" style={inputSx} /></Field>
                         <Field label="Rating (0–5)"><input type="number" step="0.1" max="5" value={pForm.rating} onChange={e => sp('rating', e.target.value)} placeholder="4.5" style={inputSx} /></Field>
                     </div>
-                    <Field label="Category"><select value={pForm.category} onChange={e => sp('category', e.target.value)} style={selSx}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></Field>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 0.875rem' }}>
+                        <Field label="Category"><select value={pForm.category} onChange={e => sp('category', e.target.value)} style={selSx}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></Field>
+                        <Field label="Merchandising Zone">
+                            <select value={pForm.merchandisingSlot} onChange={e => sp('merchandisingSlot', e.target.value)} style={selSx}>
+                                <option value="none">None</option>
+                                <option value="golden">Golden Zone</option>
+                                <option value="hotspot">Hot Spot</option>
+                                <option value="impulse">Impulse</option>
+                            </select>
+                        </Field>
+                    </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '1.25rem' }}>
                         <input type="checkbox" checked={pForm.featured} onChange={e => sp('featured', e.target.checked)} style={{ width: 15, height: 15, accentColor: '#ef4444' }} />
                         <span style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>Show on Featured / Homepage</span>
