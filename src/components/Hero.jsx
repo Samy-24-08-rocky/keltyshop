@@ -73,7 +73,7 @@ const Hero = () => {
             className="hero-visual">
             <div style={{
               width: '100%', maxWidth: 380, position: 'relative',
-              background: 'url(https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=600&q=80) center/cover',
+              background: 'url(https://scontent.fluh2-1.fna.fbcdn.net/v/t39.30808-6/487131749_122137278176596394_890088971544923846_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=110&ccb=1-7&_nc_sid=7b2446&_nc_ohc=A2XgGZzGCWoQ7kNvwFj6u9e&_nc_oc=Adl-XQz9T6mJ_GLSfMnvp05ODr65kY8M3WNcVcYwdxlxTkjUy2IGchTXNmdsC9d-IUduBkw6uYNQIOZDvVKKhMK8&_nc_zt=23&_nc_ht=scontent.fluh2-1.fna&_nc_gid=DG2QAL1UZut-y-KMZrCzUA&_nc_ss=8&oh=00_AftOz20BdJcnJF_kGexSabPK7TnCNF89wUlf5ifMpuaG6Q&oe=69A9F425',
               borderRadius: 28, height: 420, overflow: 'hidden',
             }}>
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.7) 100%)' }} />
