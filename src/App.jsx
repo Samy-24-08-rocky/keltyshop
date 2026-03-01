@@ -26,8 +26,9 @@ import SearchPage from './pages/SearchPage';
 import AdminLogin from './pages/AdminLogin';
 import AdminPanel from './pages/AdminPanel';
 import { AuthProvider } from './context/AuthContext';
-import { AdminProvider } from './context/AdminContext';
+import { AdminProvider, useAdmin } from './context/AdminContext';
 import { UserDataProvider } from './context/UserDataContext';
+import MaintenancePage from './pages/MaintenancePage';
 
 import { isFirebaseConfigured } from './firebase';
 
@@ -39,9 +40,6 @@ const StoreLayout = ({ children }) => (
     <Footer />
   </>
 );
-
-import { useAdmin } from './context/AdminContext';
-import MaintenancePage from './pages/MaintenancePage';
 
 function AppContent({ cartCount, toggleCart, addToCart, removeFromCart, updateQuantity, clearCart, cartItems }) {
   const { settings, adminUser } = useAdmin();

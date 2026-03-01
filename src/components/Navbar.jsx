@@ -6,6 +6,7 @@ import {
   FiChevronDown
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import { useAdmin } from '../context/AdminContext';
 
 const Navbar = ({ toggleCart, cartCount }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
