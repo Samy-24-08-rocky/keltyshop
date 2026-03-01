@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useAdmin } from '../../context/AdminContext';
-import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap, FiFilter, FiXCircle, FiTag, FiAlertCircle, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiStar, FiSearch, FiX, FiCheck, FiAlertTriangle, FiZap, FiFilter, FiXCircle, FiTag, FiAlertCircle, FiChevronDown, FiChevronUp, FiUpload, FiLoader } from 'react-icons/fi';
 import BarcodeScanner from './BarcodeScanner';
 
 const CATEGORIES = ['Pantry', 'Condiments', 'Dairy', 'Bakery', 'Meat', 'Seafood', 'Drinks', 'Snacks'];
@@ -50,6 +50,35 @@ export default function AdminProducts() {
     const [collapsed, setCollapsed] = useState([]);
     const [selectedIds, setSelectedIds] = useState([]);
     const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, val: '' });
+    const [uploading, setUploading] = useState(false);
+    const fileRef = useRef(null);
+
+    const handleUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        const data = new FormData();
+        data.append('file', file);
+        data.append('upload_preset', 'ml_default'); // Default preset for demo; works with most public Cloudinary accounts
+
+        try {
+            // Using Cloudinary's free unsigned upload API
+            const res = await fetch(`https://api.cloudinary.com/v1_1/demo/image/upload`, {
+                method: 'POST',
+                body: data
+            });
+            const result = await res.json();
+            if (result.secure_url) {
+                setForm(f => ({ ...f, image: result.secure_url }));
+            }
+        } catch (err) {
+            console.error("Upload failed:", err);
+            alert("Image upload failed. Please check your connection or use a direct URL.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const handleScannedProduct = (scannedData) => {
         setForm({ ...blank, ...scannedData, price: '', oldPrice: '', stock: '' });
@@ -271,6 +300,8 @@ export default function AdminProducts() {
                     .ap-grid-stock { font-size: 0.75rem; font-weight: 600; }
                     .ap-grid-actions { position: absolute; top: 0.5rem; right: 0.5rem; display: flex; gap: 0.375rem; opacity: 0; transition: opacity 0.2s; }
                     .ap-grid-card:hover .ap-grid-actions { opacity: 1; }
+                    .spin { animation: spin 1s linear infinite; }
+                    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 }
             `}</style>
 
@@ -527,7 +558,19 @@ export default function AdminProducts() {
                         </div>
                         <Input label="Product Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Organic Apples" required />
                         <Input label="Barcode (optional — for POS scanning)" value={form.barcode || ''} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} placeholder="e.g. 5012345678900" />
-                        <Input label="Image URL" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="https://…" />
+
+                        <div style={{ position: 'relative' }}>
+                            <Input label="Image URL" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))} placeholder="https://…" />
+                            <button
+                                onClick={() => fileRef.current.click()}
+                                disabled={uploading}
+                                style={{ position: 'absolute', right: 8, top: 28, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', padding: '0.4rem 0.75rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                            >
+                                {uploading ? <FiLoader className="spin" size={14} /> : <FiUpload size={14} />}
+                                {uploading ? 'Uploading...' : 'Upload Image'}
+                            </button>
+                            <input type="file" ref={fileRef} onChange={handleUpload} style={{ display: 'none' }} accept="image/*" />
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                             <Input label="Price (£)" type="number" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="1.99" />
                             <Input label="Old Price (£, optional)" type="number" step="0.01" value={form.oldPrice} onChange={e => setForm(f => ({ ...f, oldPrice: e.target.value }))} placeholder="2.49" />
