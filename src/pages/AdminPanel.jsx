@@ -19,13 +19,13 @@ import {
 
 const NAV = [
     { id: 'dashboard', label: 'Dashboard', icon: FiGrid },
+    { id: 'merchandising', label: 'Merchandising', icon: FiMonitor },
     { id: 'pos', label: 'POS / Till', icon: FiMonitor },
     { id: 'products', label: 'Products', icon: FiPackage },
     { id: 'stock', label: 'Stock Management', icon: FiAlertTriangle },
     { id: 'orders', label: 'Orders', icon: FiShoppingBag },
     { id: 'deliveries', label: 'Deliveries', icon: FiTruck },
     { id: 'reviews', label: 'Customer Reviews', icon: FiMessageSquare },
-    { id: 'merchandising', label: 'Merchandising', icon: FiMonitor },
     { id: 'reports', label: 'Reports & Billing', icon: FiBarChart2 },
     { id: 'settings', label: 'Settings', icon: FiSettings },
 ];
