@@ -16,7 +16,7 @@ const Hero = () => {
 
   // Pick the hero product from settings, fallback to highest-rated in-stock product
   const heroProduct = products.find(p => p.id === settings?.heroProductId)
-    || products.filter(p => p.stock > 0).sort((a, b) => b.rating - a.rating)[0]
+    || products.filter(p => p.stock > 0).sort((a, b) => (b.rating || 0) - (a.rating || 0))?.[0]
     || null;
 
   return (

@@ -165,7 +165,7 @@ export default function AdminProducts() {
                                             <button onClick={() => toggleFeatured(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p.featured ? '#fbbf24' : '#334155' }}>
                                                 <FiStar size={18} fill={p.featured ? '#fbbf24' : 'none'} />
                                             </button>
-                                            {p.merchandisingSlot !== 'none' && (
+                                            {p.merchandisingSlot && p.merchandisingSlot !== 'none' && (
                                                 <span title={`Manually marked: ${p.merchandisingSlot}`} style={{ background: '#ef4444', color: 'white', fontSize: '0.6rem', padding: '1px 4px', borderRadius: 4, fontWeight: 800, textTransform: 'uppercase' }}>
                                                     {p.merchandisingSlot[0]}
                                                 </span>
