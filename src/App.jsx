@@ -40,6 +40,73 @@ const StoreLayout = ({ children }) => (
   </>
 );
 
+import { useAdmin } from './context/AdminContext';
+import MaintenancePage from './pages/MaintenancePage';
+
+function AppContent({ cartCount, toggleCart, addToCart, removeFromCart, updateQuantity, clearCart, cartItems }) {
+  const { settings, adminUser } = useAdmin();
+
+  // If maintenance mode is ON and user is NOT an admin, show MaintenancePage
+  if (settings.maintenanceMode && !adminUser) {
+    return <MaintenancePage />;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {!isFirebaseConfigured && (
+        <div style={{ backgroundColor: '#ffcccc', color: '#cc0000', padding: '15px', textAlign: 'center', fontWeight: 'bold' }}>
+          ⚠️ Firebase Environment Variables are missing! If you deployed this website via Vercel or Netlify, please add the VITE_FIREBASE_* variables to your Environment Variables setting in the dashboard, and redeploy! ⚠️
+        </div>
+      )}
+      <Routes>
+        {/* ── Admin routes (no store navbar/footer) ── */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminPanel />} />
+
+        {/* ── Store routes ── */}
+        <Route path="/*" element={
+          <>
+            <Navbar toggleCart={toggleCart} cartCount={cartCount} />
+            <main style={{ flexGrow: 1 }}>
+              <Routes>
+                <Route path="/" element={<Home addToCart={addToCart} />} />
+                <Route path="/shop" element={<Shop addToCart={addToCart} />} />
+                <Route path="/cart" element={
+                  <CartPage
+                    cartItems={cartItems}
+                    removeFromCart={removeFromCart}
+                    updateQuantity={updateQuantity}
+                    addToCart={addToCart}
+                  />}
+                />
+                <Route path="/checkout" element={<Checkout cartItems={cartItems} clearCart={clearCart} />} />
+                <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} />} />
+                <Route path="/category/:id" element={<CategoryDetailPage addToCart={addToCart} />} />
+                <Route path="/deals" element={<DealsPage addToCart={addToCart} />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/categories" element={<CategoriesPage />} />
+                <Route path="/contact" element={<ContactUsPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/wishlist" element={<Wishlist addToCart={addToCart} />} />
+                <Route path="/orders" element={<OrdersPage />} />
+                <Route path="/delivery-info" element={<DeliveryInfoPage />} />
+                <Route path="/returns" element={<ReturnsPolicyPage />} />
+                <Route path="/faqs" element={<FAQsPage />} />
+                <Route path="/signout" element={<Signout />} />
+                <Route path="/search" element={<SearchPage addToCart={addToCart} />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </>
+        } />
+      </Routes>
+    </div>
+  );
+}
+
 function App() {
   const [cartItems, setCartItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('kelty_cart')) || []; }
@@ -87,58 +154,15 @@ function App() {
       <AuthProvider>
         <UserDataProvider>
           <Router>
-            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-              {!isFirebaseConfigured && (
-                <div style={{ backgroundColor: '#ffcccc', color: '#cc0000', padding: '15px', textAlign: 'center', fontWeight: 'bold' }}>
-                  ⚠️ Firebase Environment Variables are missing! If you deployed this website via Vercel or Netlify, please add the VITE_FIREBASE_* variables to your Environment Variables setting in the dashboard, and redeploy! ⚠️
-                </div>
-              )}
-              <Routes>
-                {/* ── Admin routes (no store navbar/footer) ── */}
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/admin" element={<AdminPanel />} />
-
-                {/* ── Store routes ── */}
-                <Route path="/*" element={
-                  <>
-                    <Navbar toggleCart={toggleCart} cartCount={cartCount} />
-                    <main style={{ flexGrow: 1 }}>
-                      <Routes>
-                        <Route path="/" element={<Home addToCart={addToCart} />} />
-                        <Route path="/shop" element={<Shop addToCart={addToCart} />} />
-                        <Route path="/cart" element={
-                          <CartPage
-                            cartItems={cartItems}
-                            removeFromCart={removeFromCart}
-                            updateQuantity={updateQuantity}
-                            addToCart={addToCart}
-                          />}
-                        />
-                        <Route path="/checkout" element={<Checkout cartItems={cartItems} clearCart={clearCart} />} />
-                        <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} />} />
-                        <Route path="/category/:id" element={<CategoryDetailPage addToCart={addToCart} />} />
-                        <Route path="/deals" element={<DealsPage addToCart={addToCart} />} />
-                        <Route path="/about" element={<About />} />
-                        <Route path="/categories" element={<CategoriesPage />} />
-                        <Route path="/contact" element={<ContactUsPage />} />
-                        <Route path="/register" element={<RegisterPage />} />
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/wishlist" element={<Wishlist addToCart={addToCart} />} />
-                        <Route path="/orders" element={<OrdersPage />} />
-                        <Route path="/delivery-info" element={<DeliveryInfoPage />} />
-                        <Route path="/returns" element={<ReturnsPolicyPage />} />
-                        <Route path="/faqs" element={<FAQsPage />} />
-                        <Route path="/signout" element={<Signout />} />
-                        <Route path="/search" element={<SearchPage addToCart={addToCart} />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </main>
-                    <Footer />
-                  </>
-                } />
-              </Routes>
-            </div>
+            <AppContent
+              cartCount={cartCount}
+              toggleCart={toggleCart}
+              addToCart={addToCart}
+              removeFromCart={removeFromCart}
+              updateQuantity={updateQuantity}
+              clearCart={clearCart}
+              cartItems={cartItems}
+            />
           </Router>
         </UserDataProvider>
       </AuthProvider>

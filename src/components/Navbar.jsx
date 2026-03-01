@@ -16,6 +16,7 @@ const Navbar = ({ toggleCart, cartCount }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { settings } = useAdmin();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -588,9 +589,11 @@ const Navbar = ({ toggleCart, cartCount }) => {
                   <Link to="/login" className="btn-signin">
                     <FiUser size={13} /> Sign In
                   </Link>
-                  <Link to="/register" className="btn-register">
-                    <FiUserPlus size={13} /> Register
-                  </Link>
+                  {settings.allowNewRegistrations !== false && (
+                    <Link to="/register" className="btn-register">
+                      <FiUserPlus size={13} /> Register
+                    </Link>
+                  )}
                 </div>
               )}
 
@@ -685,9 +688,11 @@ const Navbar = ({ toggleCart, cartCount }) => {
                   <Link to="/login" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
                     <FiUser size={15} style={{ marginRight: '0.5rem' }} /> Sign In
                   </Link>
-                  <Link to="/register" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                    <FiUserPlus size={15} style={{ marginRight: '0.5rem' }} /> Create Account
-                  </Link>
+                  {settings.allowNewRegistrations !== false && (
+                    <Link to="/register" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                      <FiUserPlus size={15} style={{ marginRight: '0.5rem' }} /> Create Account
+                    </Link>
+                  )}
                   <div className="mobile-divider" />
                 </>
               )}

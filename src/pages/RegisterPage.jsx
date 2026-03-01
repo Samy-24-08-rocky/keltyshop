@@ -35,7 +35,25 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register, loginWithGoogle } = useAuth();
+  const { settings } = useAdmin();
   const navigate = useNavigate();
+
+  if (settings.allowNewRegistrations === false) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#fef2f2 0%,#fff 60%,#fef2f2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ width: '100%', maxWidth: 440, textAlign: 'center' }}>
+          <div style={{ width: 80, height: 80, background: 'rgba(239,68,68,0.1)', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <FiLock size={32} color="#ef4444" />
+          </div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem' }}>Registration Closed</h1>
+          <p style={{ color: '#64748b', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '2rem' }}>
+            New customer registrations are temporarily disabled. Please contact our support if you're a returning customer having issues logging in.
+          </p>
+          <Link to="/" style={{ color: '#ef4444', fontWeight: 700, textDecoration: 'none' }}>Return to Home</Link>
+        </div>
+      </div>
+    );
+  }
 
   const pwStrength = passwordStrength(password);
 
