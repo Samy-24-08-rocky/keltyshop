@@ -92,11 +92,16 @@ const CrossMerchandising = ({ product, addToCart }) => {
                             }}
                         >
                             <div style={{ position: 'relative', height: 110, overflow: 'hidden' }}>
-                                <Link to={`/product/${p.id}`}>
-                                    <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform .4s' }}
-                                        onMouseEnter={e => e.target.style.transform = 'scale(1.07)'}
-                                        onMouseLeave={e => e.target.style.transform = 'none'}
-                                    />
+                                <Link to={`/product/${p.id}`} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+                                    {p.image ? (
+                                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform .4s' }}
+                                            onMouseEnter={e => e.target.style.transform = 'scale(1.07)'}
+                                            onMouseLeave={e => e.target.style.transform = 'none'}
+                                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=800&q=80'; }}
+                                        />
+                                    ) : (
+                                        <div style={{ color: '#cbd5e0' }}><FiZap size={24} /></div>
+                                    )}
                                 </Link>
                                 {discount > 0 && (
                                     <div style={{ position: 'absolute', top: 7, right: 7, background: 'linear-gradient(135deg,#e53e3e,#c53030)', color: 'white', fontSize: '0.62rem', fontWeight: 800, padding: '2px 7px', borderRadius: 99 }}>

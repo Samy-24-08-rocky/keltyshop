@@ -4,12 +4,6 @@ import { FiShoppingCart, FiArrowRight, FiClock } from 'react-icons/fi';
 
 const DEALS = [
   {
-    id: 1, name: 'Premium Beef Steak', price: 8.99, oldPrice: 11.99, discount: 25,
-    endMs: Date.now() + 2 * 3600_000 + 45 * 60_000,
-    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&q=80',
-    tag: '🥩 Best Seller',
-  },
-  {
     id: 2, name: 'Organic Bananas (kg)', price: 0.69, oldPrice: 0.99, discount: 30,
     endMs: Date.now() + 1 * 3600_000 + 30 * 60_000,
     image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=600&q=80',

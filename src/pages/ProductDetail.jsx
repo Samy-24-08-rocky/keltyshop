@@ -23,6 +23,7 @@ const ProductDetail = ({ addToCart }) => {
   const { toggleWishlist, isWishlisted } = useUserData();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   // Find real product from AdminContext
   const product = products.find(p => String(p.id) === String(id));
@@ -74,12 +75,22 @@ const ProductDetail = ({ addToCart }) => {
         <div className="lg:grid lg:grid-cols-2 lg:gap-16">
           {/* Product Image */}
           <div style={{ position: 'relative' }}>
-            <div style={{ borderRadius: 20, overflow: 'hidden', background: '#f7f7f7', aspectRatio: '1', position: 'relative' }}>
-              <img
-                src={product.image}
-                alt={product.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: outOfStock ? 'grayscale(40%)' : 'none', transition: 'filter .3s' }}
-              />
+            <div style={{ borderRadius: 20, overflow: 'hidden', background: '#f8fafc', aspectRatio: '1', position: 'relative', border: '1px solid #edf2f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {product.image && !imgError ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  onError={() => setImgError(true)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', filter: outOfStock ? 'grayscale(40%)' : 'none', transition: 'filter .3s' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#cbd5e0' }}>
+                  <svg style={{ width: 80, height: 80, margin: '0 auto 1rem', display: 'block' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>Image not available</p>
+                </div>
+              )}
               {/* Out of Stock overlay */}
               {outOfStock && (
                 <div style={{

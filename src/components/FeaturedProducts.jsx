@@ -96,8 +96,16 @@ const FeaturedProducts = ({ addToCart, expanded = false }) => {
                 <div key={product.id} className="product-card" style={outOfStock ? { opacity: 0.72, filter: 'grayscale(35%)' } : {}}>
                   {/* Image */}
                   <div className="product-img-wrap">
-                    <Link to={`/product/${product.id}`}>
-                      <img src={product.image} alt={product.name} />
+                    <Link to={`/product/${product.id}`} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=800&q=80'; }}
+                        />
+                      ) : (
+                        <div style={{ color: '#cbd5e0', padding: '1rem' }}><FiAlertCircle size={32} /></div>
+                      )}
                     </Link>
 
                     {/* Out of Stock overlay on image */}
