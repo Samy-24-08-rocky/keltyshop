@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiShoppingCart, FiArrowRight, FiClock } from 'react-icons/fi';
+import { useAdmin } from '../context/AdminContext';
 
 const DEALS = [
   {
@@ -74,30 +75,35 @@ const DealCard = ({ deal, addToCart }) => {
   );
 };
 
-const WeeklyDeals = ({ addToCart }) => (
-  <section className="deals-section">
-    <div className="container">
-      {/* Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', marginBottom: '2.5rem' }}>
-        <div>
-          <div className="section-tag" style={{ background: 'rgba(246,173,85,0.15)', borderColor: 'rgba(246,173,85,0.35)', color: '#f6ad55' }}>
-            🔥 Limited Time
-          </div>
-          <h2 className="section-title" style={{ color: 'white' }}>Weekly Hot Deals</h2>
-          <p className="section-sub" style={{ color: 'rgba(255,255,255,0.5)' }}>Flash prices — grab them before they're gone</p>
-        </div>
-        <Link to="/deals" className="view-all-link" style={{ color: '#f6ad55' }}>
-          All deals <FiArrowRight />
-        </Link>
-      </div>
+const WeeklyDeals = ({ addToCart }) => {
+  const { settings } = useAdmin();
+  const deals = settings?.weeklyDeals?.length > 0 ? settings.weeklyDeals : DEALS;
 
-      <div className="grid-deals">
-        {DEALS.map(deal => (
-          <DealCard key={deal.id} deal={deal} addToCart={addToCart} />
-        ))}
+  return (
+    <section className="deals-section">
+      <div className="container">
+        {/* Header */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: '1rem', marginBottom: '2.5rem' }}>
+          <div>
+            <div className="section-tag" style={{ background: 'rgba(246,173,85,0.15)', borderColor: 'rgba(246,173,85,0.35)', color: '#f6ad55' }}>
+              🔥 Limited Time
+            </div>
+            <h2 className="section-title" style={{ color: 'white' }}>Weekly Hot Deals</h2>
+            <p className="section-sub" style={{ color: 'rgba(255,255,255,0.5)' }}>Flash prices — grab them before they're gone</p>
+          </div>
+          <Link to="/deals" className="view-all-link" style={{ color: '#f6ad55' }}>
+            All deals <FiArrowRight />
+          </Link>
+        </div>
+
+        <div className="grid-deals">
+          {deals.map(deal => (
+            <DealCard key={deal.id} deal={deal} addToCart={addToCart} />
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+};
 
 export default WeeklyDeals;

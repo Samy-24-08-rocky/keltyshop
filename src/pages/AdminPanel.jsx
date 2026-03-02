@@ -11,6 +11,7 @@ import AdminStock from '../components/admin/AdminStock';
 import AdminReviews from '../components/admin/AdminReviews';
 import AdminPOS from '../components/admin/AdminPOS';
 import AdminMerchandising from '../components/admin/AdminMerchandising';
+import AdminDeals from '../components/admin/AdminDeals';
 import {
     FiGrid, FiPackage, FiShoppingBag, FiTruck, FiSettings,
     FiLogOut, FiMenu, FiX, FiShoppingCart, FiChevronRight, FiBarChart2,
@@ -22,6 +23,7 @@ const NAV = [
     { id: 'merchandising', label: 'Merchandising', icon: FiMonitor },
     { id: 'pos', label: 'POS / Till', icon: FiMonitor },
     { id: 'products', label: 'Products', icon: FiPackage },
+    { id: 'deals', label: 'Flash Sales', icon: FiAlertTriangle },
     { id: 'stock', label: 'Stock Management', icon: FiAlertTriangle },
     { id: 'orders', label: 'Orders', icon: FiShoppingBag },
     { id: 'deliveries', label: 'Deliveries', icon: FiTruck },
@@ -69,6 +71,7 @@ export default function AdminPanel() {
         dashboard: <AdminDashboard />,
         pos: <AdminPOS />,
         products: <AdminProducts />,
+        deals: <AdminDeals />,
         stock: <AdminStock />,
         orders: <AdminOrders />,
         deliveries: <AdminDeliveries />,
