@@ -72,7 +72,7 @@ export default function AdminDeals() {
                         <select
                             value={selectedProductId}
                             onChange={(e) => setSelectedProductId(e.target.value)}
-                            style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                            style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
                         >
                             <option value="">-- Choose Product --</option>
                             {products.map(p => (
@@ -89,18 +89,25 @@ export default function AdminDeals() {
                                 value={discount}
                                 onChange={(e) => setDiscount(e.target.value)}
                                 placeholder="e.g. 20"
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
                             />
                         </div>
                         <div style={{ flex: 1 }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Badge Tag</label>
-                            <input
-                                type="text"
+                            <select
                                 value={tag}
                                 onChange={(e) => setTag(e.target.value)}
-                                placeholder="e.g. 🥩 Best Seller"
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                            />
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                            >
+                                <option value="🔥 Fast Selling">🔥 Fast Selling</option>
+                                <option value="🥩 Best Seller">🥩 Best Seller</option>
+                                <option value="🌿 Organic">🌿 Organic</option>
+                                <option value="🐟 Wild Caught">🐟 Wild Caught</option>
+                                <option value="⭐ Top Rated">⭐ Top Rated</option>
+                                <option value="✨ New Arrival">✨ New Arrival</option>
+                                <option value="⬇️ Price Drop">⬇️ Price Drop</option>
+                                <option value="🛒 Save Big">🛒 Save Big</option>
+                            </select>
                         </div>
                     </div>
 
@@ -111,7 +118,7 @@ export default function AdminDeals() {
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white', colorScheme: 'dark' }}
                             />
                         </div>
                         <div style={{ flex: 1 }}>
@@ -120,7 +127,7 @@ export default function AdminDeals() {
                                 type="time"
                                 value={endTime}
                                 onChange={(e) => setEndTime(e.target.value)}
-                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                style={{ width: '100%', padding: '0.75rem', borderRadius: 8, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', color: 'white', colorScheme: 'dark' }}
                             />
                         </div>
                     </div>
