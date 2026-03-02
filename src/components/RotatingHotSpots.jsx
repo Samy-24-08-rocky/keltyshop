@@ -92,7 +92,7 @@ const RotatingHotSpots = ({ addToCart }) => {
                             }}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                padding: '0.5rem 1rem', borderRadius: 10, border: 'none',
+                                padding: '0.5rem 1rem', borderRadius: 10,
                                 cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
                                 background: activeSpot === i ? s.color : 'white',
                                 color: activeSpot === i ? 'white' : '#718096',
